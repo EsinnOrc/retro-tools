@@ -1,44 +1,47 @@
-const express = require("express");
-const next = require("next");
-const http = require("http");
-const socketIo = require("socket.io");
+const express = require('express');
+const next = require('next');
+const http = require('http');
+const socketIo = require('socket.io');
 
-const dev = process.env.NODE_ENV !== "production";
+const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
+
+const PORT = process.env.PORT || 3001;
 
 app.prepare().then(() => {
   const server = express();
   const httpServer = http.createServer(server);
   const io = socketIo(httpServer, {
     cors: {
-      origin: "http://localhost:3001", // Next.js uygulamanızın çalıştığı port
+      origin: "http://localhost:3000",
       methods: ["GET", "POST"],
-    },
+      credentials: true,
+    }
   });
 
-  io.on("connection", (socket) => {
-    console.log("a user connected");
+  io.on('connection', (socket) => {
+    console.log('a user connected');
 
-    socket.on("disconnect", () => {
-      console.log("user disconnected");
+    socket.on('disconnect', () => {
+      console.log('user disconnected');
     });
 
-    socket.on("sendMessage", (message) => {
-      socket.broadcast.emit("receiveMessage", message);
+    socket.on('sendMessage', (message) => {
+      socket.broadcast.emit('receiveMessage', message);
     });
 
-    socket.on("finalize", () => {
-      io.emit("finalizeComments");
+    socket.on('finalize', () => {
+      io.emit('finalizeComments');
     });
   });
 
-  server.all("*", (req, res) => {
+  server.all('*', (req, res) => {
     return handle(req, res);
   });
 
-  httpServer.listen(3001, (err) => {
+  httpServer.listen(PORT, (err) => {
     if (err) throw err;
-    console.log("> Ready on http://localhost:3001");
+    console.log(`> Ready on http://localhost:${PORT}`);
   });
 });

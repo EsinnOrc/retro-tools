@@ -1,4 +1,3 @@
-// components/CommentSection.tsx
 import React, { useState, useEffect } from "react";
 import io from "socket.io-client";
 import { List, Input, Button } from "antd";

@@ -1,5 +1,6 @@
-/** @type {import('next').NextConfig} */
-
+/**
+ * @type {import('next').NextConfig}
+ */
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: [
@@ -13,6 +14,14 @@ const nextConfig = {
     "rc-tree",
     "rc-table",
   ],
+  async rewrites() {
+    return [
+      {
+        source: '/socket.io/:path*',
+        destination: 'http://localhost:3001/socket.io/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;
