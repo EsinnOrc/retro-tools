@@ -1,0 +1,11 @@
+.select {
+  :global {
+    .ant-select {
+      width: 100%;
+      &::after {
+        overflow: auto;
+        max-width: max-content;
+      }
+    }
+  }
+}
