@@ -4,14 +4,23 @@ import { Button, Layout, Menu, Card, message } from "antd";
 import GoogleLogin from "@/components/googleLogin";
 import { onAuthStateChanged, User, signOut } from "firebase/auth";
 import { auth } from "@/firebaseConfig";
-import { getFirestore, collection, getDocs, query, where, addDoc } from "firebase/firestore";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  query,
+  where,
+  addDoc,
+} from "firebase/firestore";
 
 const { Header, Content, Footer } = Layout;
 
 const Home: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [templateSteps, setTemplateSteps] = useState<{ [key: string]: any[] }>({});
+  const [templateSteps, setTemplateSteps] = useState<{ [key: string]: any[] }>(
+    {}
+  );
   const router = useRouter();
 
   useEffect(() => {
@@ -26,18 +35,29 @@ const Home: React.FC = () => {
       const fetchTemplates = async () => {
         try {
           const db = getFirestore();
-          const templatesSnapshot = await getDocs(collection(db, "templates"));
-          const templatesList = templatesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const templatesQuery = query(
+            collection(db, "templates"),
+            where("user_id", "==", user.uid)
+          );
+          const templatesSnapshot = await getDocs(templatesQuery);
+          const templatesList = templatesSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
           setTemplates(templatesList);
 
           const templateStepsData: { [key: string]: any[] } = {};
           for (const template of templatesList) {
-            const stepsQuery = query(collection(db, "template_steps"), where("template_id", "==", template.id));
+            const stepsQuery = query(
+              collection(db, "template_steps"),
+              where("template_id", "==", template.id)
+            );
             const stepsSnapshot = await getDocs(stepsQuery);
-            templateStepsData[template.id] = stepsSnapshot.docs.map(doc => doc.data());
+            templateStepsData[template.id] = stepsSnapshot.docs.map((doc) =>
+              doc.data()
+            );
           }
           setTemplateSteps(templateStepsData);
-
         } catch (error) {
           console.error("Error fetching templates or steps:", error);
         }
@@ -64,11 +84,13 @@ const Home: React.FC = () => {
   };
 
   const handleLogout = () => {
-    signOut(auth).then(() => {
-      setUser(null);
-    }).catch((error) => {
-      console.error("Error signing out:", error);
-    });
+    signOut(auth)
+      .then(() => {
+        setUser(null);
+      })
+      .catch((error) => {
+        console.error("Error signing out:", error);
+      });
   };
 
   return (
@@ -79,17 +101,27 @@ const Home: React.FC = () => {
           <Menu.Item key="1">Home</Menu.Item>
         </Menu>
       </Header>
-      <Content style={{ padding: '0 50px' }}>
+      <Content style={{ padding: "0 50px" }}>
         <div className="site-layout-content">
           {user ? (
             <div>
               <p>Welcome, {user.displayName}</p>
-              <Button onClick={() => window.location.href = "/create-template"}>Create Template</Button>
+              <Button
+                onClick={() => (window.location.href = "/create-template")}
+              >
+                Create Template
+              </Button>
               <Button onClick={handleLogout}>Logout</Button>
               <div className="templates-list">
-                {templates.map(template => (
-                  <Card key={template.id} title={template.name} style={{ margin: '10px' }}>
-                    <Button onClick={() => handleCreateRoom(template.id)}>Create Room</Button>
+                {templates.map((template) => (
+                  <Card
+                    key={template.id}
+                    title={template.name}
+                    style={{ margin: "10px" }}
+                  >
+                    <Button onClick={() => handleCreateRoom(template.id)}>
+                      Create Room
+                    </Button>
                     <div>
                       <h4>Steps:</h4>
                       <ul>
@@ -107,7 +139,9 @@ const Home: React.FC = () => {
           )}
         </div>
       </Content>
-      <Footer style={{ textAlign: "center" }}>©2024 Created by Esin and Semih</Footer>
+      <Footer style={{ textAlign: "center" }}>
+        © 2024 Created by Esin and Semih
+      </Footer>
     </Layout>
   );
 };
