@@ -3,6 +3,7 @@ import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { db } from "../firebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
 import { useRouter } from "next/router";
+import { Button } from "antd";
 
 const GoogleLogin: React.FC = () => {
   const router = useRouter();
@@ -34,7 +35,7 @@ const GoogleLogin: React.FC = () => {
 
   return (
     <div>
-      <button onClick={googleLogin}>Login with Google</button>
+      <Button onClick={googleLogin}>Login with Google</Button>
     </div>
   );
 };

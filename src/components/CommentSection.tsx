@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from "react";
 import io from "socket.io-client";
 import { List, Input, Button } from "antd";
+import { v4 as uuidv4 } from "uuid";
 
 const socket = io("http://localhost:3001");
+const userId = uuidv4();
+
+interface Comment {
+  id: string;
+  message: string;
+}
 
 const CommentSection: React.FC = () => {
-  const [comments, setComments] = useState<string[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [isFinalized, setIsFinalized] = useState(false);
 
   useEffect(() => {
-    socket.on("receiveMessage", (message: string) => {
-      setComments((prevComments) => [...prevComments, message]);
+    socket.on("receiveMessage", (comment: Comment) => {
+      setComments((prevComments) => [...prevComments, comment]);
     });
 
     socket.on("finalizeComments", () => {
@@ -25,7 +32,9 @@ const CommentSection: React.FC = () => {
   }, []);
 
   const sendComment = () => {
-    socket.emit("sendMessage", newComment);
+    const comment = { id: userId, message: newComment };
+    socket.emit("sendMessage", comment);
+    setComments((prevComments) => [...prevComments, comment]);
     setNewComment("");
   };
 
@@ -39,8 +48,14 @@ const CommentSection: React.FC = () => {
         dataSource={comments}
         renderItem={(comment) => (
           <List.Item>
-            <div style={{ filter: isFinalized ? "none" : "blur(4px)" }}>
-              {comment}
+            <div
+              style={{
+                filter: comment.id === userId ? "none" : "blur(4px)",
+                fontWeight: comment.id === userId ? "bold" : "normal",
+                color: comment.id === userId ? "blue" : "black",
+              }}
+            >
+              {comment.message}
             </div>
           </List.Item>
         )}
