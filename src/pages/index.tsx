@@ -76,7 +76,7 @@ const Home: React.FC = () => {
         created_at: new Date(),
       });
       message.success("Room created successfully");
-      router.push(`/rooms/${roomRef.id}`);
+      router.push(`/room/${roomRef.id}`);
     } catch (error) {
       console.error("Error creating room:", error);
       message.error("Failed to create room");
