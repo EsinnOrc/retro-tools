@@ -3,9 +3,11 @@ import { useRouter } from "next/router";
 import { Layout } from "antd";
 import { getAuth } from "firebase/auth";
 import { collection, addDoc } from "firebase/firestore";
+import { v4 as uuidv4 } from 'uuid'; // UUID kütüphanesi eklendi
 import { db } from "../../firebaseConfig";
 import Inputs from "@/components/atoms/inputs/inputs";
 import Buttons from "@/components/atoms/buttons/button";
+import SelectGroup from "@/components/molecules/selectGroup/selectGroup";
 import InputGroup from "@/components/molecules/inputGroup/inputGroup";
 import styles from "@/components/organisms/form/index.module.scss";
 
@@ -14,8 +16,8 @@ const { Content, Footer } = Layout;
 const CreateTemplateForm: FC = () => {
   const [templateName, setTemplateName] = useState("");
   const [step, setStep] = useState("");
-  const [stepNames, setStepNames] = useState<string[]>([]);
-  const [showStepNames, setShowStepNames] = useState(false);
+  const [stepNames, setStepNames] = useState<{ id: string; name: string }[]>([]);
+  const [showSteps, setShowSteps] = useState(false);
   const router = useRouter();
   const auth = getAuth();
 
@@ -28,20 +30,12 @@ const CreateTemplateForm: FC = () => {
     }
 
     try {
-      const templateRef = await addDoc(collection(db, "templates"), {
+      await addDoc(collection(db, "templates"), {
         name: templateName,
         step: parseInt(step, 10),
+        step_names: stepNames,
         user_id: user.uid,
       });
-
-      const stepPromises = stepNames.map((stepName) =>
-        addDoc(collection(db, "template_steps"), {
-          template_id: templateRef.id,
-          step_name: stepName,
-        })
-      );
-
-      await Promise.all(stepPromises);
 
       console.log("Template and steps created successfully");
       router.push("/");
@@ -52,14 +46,22 @@ const CreateTemplateForm: FC = () => {
 
   const handleStepNameChange = (index: number, value: string) => {
     const newStepNames = [...stepNames];
-    newStepNames[index] = value;
+    newStepNames[index].name = value;
     setStepNames(newStepNames);
   };
 
   const handleNextClick = () => {
-    const stepCount = parseInt(step, 10) || 0;
-    setStepNames(new Array(stepCount).fill(""));
-    setShowStepNames(true);
+    setShowSteps(true);
+  };
+
+  const handleStepChange = (value: string) => {
+    setStep(value);
+    const stepCount = parseInt(value, 10) || 0;
+    const newStepNames = [];
+    for (let i = 0; i < stepCount; i++) {
+      newStepNames.push({ id: uuidv4(), name: "" }); // UUID ile benzersiz ID oluşturuluyor
+    }
+    setStepNames(newStepNames);
   };
 
   return (
@@ -74,24 +76,24 @@ const CreateTemplateForm: FC = () => {
             value={templateName}
             type="text"
           />
-          <InputGroup
-            label="Number of Steps"
-            name="steps"
-            onChange={(e) => setStep(e.target.value)}
-            value={step}
-            type="number"
-          />
-          {!showStepNames && (
+          {!showSteps ? (
             <Buttons text="İleri" onClick={handleNextClick} htmlType="button" />
-          )}
-          {showStepNames && (
+          ) : (
             <>
-              {stepNames.map((_, index) => (
+              <SelectGroup
+                label="Number of Steps"
+                name="steps"
+                onChange={handleStepChange}
+                value={step}
+                options={[1, 2, 3, 4, 5].map((num) => ({ value: num.toString(), label: num.toString() }))}
+                placeholder="Select number of steps"
+              />
+              {stepNames.map((step, index) => (
                 <Inputs
                   key={index}
                   name={`stepName${index}`}
                   onChange={(e) => handleStepNameChange(index, e.target.value)}
-                  value={stepNames[index]}
+                  value={step.name}
                   type="text"
                 />
               ))}
