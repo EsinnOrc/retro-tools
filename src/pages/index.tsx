@@ -3,24 +3,14 @@ import { useRouter } from "next/router";
 import { Button, Layout, Menu, Card, message } from "antd";
 import GoogleLogin from "@/components/googleLogin";
 import { onAuthStateChanged, User, signOut } from "firebase/auth";
-import { auth } from "@/firebaseConfig";
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  query,
-  where,
-  addDoc,
-} from "firebase/firestore";
+import { auth, db } from "@/firebaseConfig";
+import { getFirestore, collection, getDocs, query, where, addDoc } from "firebase/firestore";
 
 const { Header, Content, Footer } = Layout;
 
 const Home: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [templateSteps, setTemplateSteps] = useState<{ [key: string]: any[] }>(
-    {}
-  );
   const router = useRouter();
 
   useEffect(() => {
@@ -34,7 +24,6 @@ const Home: React.FC = () => {
     if (user) {
       const fetchTemplates = async () => {
         try {
-          const db = getFirestore();
           const templatesQuery = query(
             collection(db, "templates"),
             where("user_id", "==", user.uid)
@@ -45,21 +34,8 @@ const Home: React.FC = () => {
             ...doc.data(),
           }));
           setTemplates(templatesList);
-
-          const templateStepsData: { [key: string]: any[] } = {};
-          for (const template of templatesList) {
-            const stepsQuery = query(
-              collection(db, "template_steps"),
-              where("template_id", "==", template.id)
-            );
-            const stepsSnapshot = await getDocs(stepsQuery);
-            templateStepsData[template.id] = stepsSnapshot.docs.map((doc) =>
-              doc.data()
-            );
-          }
-          setTemplateSteps(templateStepsData);
         } catch (error) {
-          console.error("Error fetching templates or steps:", error);
+          console.error("Error fetching templates:", error);
         }
       };
 
@@ -69,7 +45,6 @@ const Home: React.FC = () => {
 
   const handleCreateRoom = async (templateId: string) => {
     try {
-      const db = getFirestore();
       const roomRef = await addDoc(collection(db, "rooms"), {
         template_id: templateId,
         is_active: true,
@@ -125,8 +100,8 @@ const Home: React.FC = () => {
                     <div>
                       <h4>Steps:</h4>
                       <ul>
-                        {templateSteps[template.id]?.map((step, index) => (
-                          <li key={index}>{step.step_name}</li>
+                        {template.step_names?.map((step, index) => (
+                          <li key={index}>{step.name}</li>
                         ))}
                       </ul>
                     </div>

@@ -1,29 +1,34 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { List, Input, Button, message } from "antd";
+import { List, Input, Button, Skeleton } from "antd";
 import io from "socket.io-client";
 import { v4 as uuidv4 } from "uuid";
-import {
-  getFirestore,
-  collection,
-  getDoc,
-  doc,
-  getDocs,
-  query,
-  where,
-} from "firebase/firestore";
+import { db } from "@/firebaseConfig";
+import { collection, addDoc, getDoc, doc, query, where, onSnapshot } from "firebase/firestore";
 
 const socket = io("http://localhost:3001");
-const userId = uuidv4();
+
+const getUserId = () => {
+  if (typeof window !== "undefined") {
+    let userId = localStorage.getItem("userId");
+    if (!userId) {
+      userId = uuidv4();
+      localStorage.setItem("userId", userId);
+    }
+    return userId;
+  }
+  return uuidv4(); // SSR için fallback
+};
 
 interface Comment {
   id: string;
   message: string;
+  userId: string;
 }
 
 interface Step {
   id: string;
-  step_name: string;
+  name: string;
 }
 
 const Room: React.FC = () => {
@@ -31,43 +36,49 @@ const Room: React.FC = () => {
   const [newComments, setNewComments] = useState<{ [key: string]: string }>({});
   const [isFinalized, setIsFinalized] = useState(false);
   const [steps, setSteps] = useState<Step[]>([]);
+  const [templateOwnerId, setTemplateOwnerId] = useState<string | null>(null);
   const router = useRouter();
   const { roomId } = router.query;
+  const userId = getUserId();
 
   useEffect(() => {
-    const fetchSteps = async () => {
+    const fetchRoomData = async () => {
       if (roomId) {
         try {
-          console.log("Fetching template ID for roomId:", roomId);
-          const db = getFirestore();
           const roomRef = doc(db, "rooms", roomId as string);
           const roomDoc = await getDoc(roomRef);
 
           if (roomDoc.exists()) {
-            const templateId = roomDoc.data().template_id;
-            console.log("Template ID:", templateId);
+            const roomData = roomDoc.data();
+            const templateId = roomData.template_id;
 
-            const stepsQuery = query(
-              collection(db, "template_steps"),
-              where("template_id", "==", templateId)
-            );
-            const stepsSnapshot = await getDocs(stepsQuery);
-            const stepsList = stepsSnapshot.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }));
-            console.log("Fetched steps:", stepsList);
-            setSteps(stepsList);
+            const templateRef = doc(db, "templates", templateId);
+            const templateDoc = await getDoc(templateRef);
+
+            if (templateDoc.exists()) {
+              const templateData = templateDoc.data();
+              setTemplateOwnerId(templateData.user_id);
+
+              const stepsList = templateData.step_names.map((step: any) => ({
+                id: step.id,
+                name: step.name,
+              }));
+              setSteps(stepsList);
+
+              fetchComments(roomId as string);
+            } else {
+              console.error("No such template!");
+            }
           } else {
             console.error("No such room!");
           }
         } catch (error) {
-          console.error("Error fetching steps:", error);
+          console.error("Error fetching room data:", error);
         }
       }
     };
 
-    fetchSteps();
+    fetchRoomData();
   }, [roomId]);
 
   useEffect(() => {
@@ -88,14 +99,50 @@ const Room: React.FC = () => {
     };
   }, []);
 
-  const sendComment = (stepId: string) => {
-    const comment = { id: stepId, message: newComments[stepId] };
-    socket.emit("sendMessage", comment);
-    setComments((prevComments) => ({
-      ...prevComments,
-      [stepId]: [...(prevComments[stepId] || []), comment],
-    }));
-    setNewComments((prevComments) => ({ ...prevComments, [stepId]: "" }));
+  const fetchComments = (roomId: string) => {
+    const commentsQuery = query(collection(db, "comments"), where("room_id", "==", roomId));
+    onSnapshot(commentsQuery, (snapshot) => {
+      const commentsData: { [key: string]: Comment[] } = {};
+      snapshot.forEach((doc) => {
+        const data = doc.data() as Comment;
+        if (!commentsData[data.id]) {
+          commentsData[data.id] = [];
+        }
+        commentsData[data.id].push(data);
+      });
+      setComments(commentsData);
+    });
+  };
+
+  const sendComment = async (stepId: string) => {
+    if (!stepId || !newComments[stepId]) {
+      console.error("Invalid stepId or comment content");
+      return;
+    }
+
+    const comment = { id: stepId, message: newComments[stepId], userId };
+
+    try {
+      await addDoc(collection(db, "comments"), {
+        comment: comment.message,
+        group_id: null,
+        likes: 0,
+        room_id: roomId,
+        step_id: stepId,
+        userId: userId,
+      });
+
+      socket.emit("sendMessage", comment);
+
+      setComments((prevComments) => ({
+        ...prevComments,
+        [stepId]: [...(prevComments[stepId] || []), comment],
+      }));
+
+      setNewComments((prevComments) => ({ ...prevComments, [stepId]: "" }));
+    } catch (error) {
+      console.error("Error adding document or emitting socket event: ", error);
+    }
   };
 
   const finalizeComments = () => {
@@ -107,20 +154,33 @@ const Room: React.FC = () => {
       {steps.length > 0 ? (
         steps.map((step) => (
           <div key={step.id} style={{ marginBottom: "20px" }}>
-            <h4>{step.step_name}</h4>
+            <h4>{step.name}</h4>
             <List
               dataSource={comments[step.id] || []}
               renderItem={(comment) => (
                 <List.Item>
-                  <div
-                    style={{
-                      filter: comment.id === userId ? "none" : "blur(4px)",
-                      fontWeight: comment.id === userId ? "bold" : "normal",
-                      color: comment.id === userId ? "blue" : "black",
-                    }}
-                  >
-                    {comment.message}
-                  </div>
+                  {comment.userId !== userId ? (
+                    <Skeleton active paragraph={{ rows: 1, width: "80%" }}>
+                      <div
+                        style={{
+                          filter: "blur(4px)",
+                          fontWeight: "normal",
+                          color: "black",
+                        }}
+                      >
+                        {comment.message}
+                      </div>
+                    </Skeleton>
+                  ) : (
+                    <div
+                      style={{
+                        fontWeight: "bold",
+                        color: "blue",
+                      }}
+                    >
+                      {comment.message}
+                    </div>
+                  )}
                 </List.Item>
               )}
             />
@@ -133,6 +193,7 @@ const Room: React.FC = () => {
                 }))
               }
               placeholder="yorum yap"
+              disabled={isFinalized}
             />
             <Button
               type="primary"
@@ -146,9 +207,11 @@ const Room: React.FC = () => {
       ) : (
         <p>Loading steps...</p>
       )}
-      <Button type="default" onClick={finalizeComments} disabled={isFinalized}>
-        Sonuçlandır
-      </Button>
+      {templateOwnerId === userId && (
+        <Button type="default" onClick={finalizeComments} disabled={isFinalized}>
+          Sonuçlandır
+        </Button>
+      )}
     </div>
   );
 };

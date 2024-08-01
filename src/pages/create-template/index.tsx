@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { Layout } from "antd";
 import { getAuth } from "firebase/auth";
 import { collection, addDoc } from "firebase/firestore";
-import { v4 as uuidv4 } from 'uuid'; // UUID kütüphanesi eklendi
+import { v4 as uuidv4 } from 'uuid';
 import { db } from "../../firebaseConfig";
 import Inputs from "@/components/atoms/inputs/inputs";
 import Buttons from "@/components/atoms/buttons/button";
@@ -59,7 +59,7 @@ const CreateTemplateForm: FC = () => {
     const stepCount = parseInt(value, 10) || 0;
     const newStepNames = [];
     for (let i = 0; i < stepCount; i++) {
-      newStepNames.push({ id: uuidv4(), name: "" }); // UUID ile benzersiz ID oluşturuluyor
+      newStepNames.push({ id: uuidv4(), name: "" });
     }
     setStepNames(newStepNames);
   };
@@ -102,7 +102,7 @@ const CreateTemplateForm: FC = () => {
           )}
         </div>
       </Content>
-      <Footer style={{ textAlign: "center" }}>©2023 Created by You</Footer>
+      <Footer style={{ textAlign: "center" }}>©2024 Created by Esin and Semih</Footer>
     </Layout>
   );
 };
