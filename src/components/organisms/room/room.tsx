@@ -2,23 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { List, Input, Button, Skeleton } from "antd";
 import io from "socket.io-client";
-import { v4 as uuidv4 } from "uuid";
 import { db } from "@/firebaseConfig";
 import { collection, addDoc, getDoc, doc, query, where, onSnapshot } from "firebase/firestore";
 
 const socket = io("http://localhost:3001");
-
-const getUserId = () => {
-  if (typeof window !== "undefined") {
-    let userId = localStorage.getItem("userId");
-    if (!userId) {
-      userId = uuidv4();
-      localStorage.setItem("userId", userId);
-    }
-    return userId;
-  }
-  return uuidv4(); // SSR için fallback
-};
 
 interface Comment {
   id: string;
@@ -37,9 +24,32 @@ const Room: React.FC = () => {
   const [isFinalized, setIsFinalized] = useState(false);
   const [steps, setSteps] = useState<Step[]>([]);
   const [templateOwnerId, setTemplateOwnerId] = useState<string | null>(null);
+  const [socketId, setSocketId] = useState<string | null>(null);
   const router = useRouter();
   const { roomId } = router.query;
-  const userId = getUserId();
+
+  useEffect(() => {
+    socket.on("connect", () => {
+      setSocketId(socket.id);
+    });
+
+    socket.on("receiveMessage", (comment: Comment) => {
+      setComments((prevComments) => ({
+        ...prevComments,
+        [comment.id]: [...(prevComments[comment.id] || []), comment],
+      }));
+    });
+
+    socket.on("finalizeComments", () => {
+      setIsFinalized(true);
+    });
+
+    return () => {
+      socket.off("connect");
+      socket.off("receiveMessage");
+      socket.off("finalizeComments");
+    };
+  }, []);
 
   useEffect(() => {
     const fetchRoomData = async () => {
@@ -65,6 +75,7 @@ const Room: React.FC = () => {
               }));
               setSteps(stepsList);
 
+              // Yorumları çekme
               fetchComments(roomId as string);
             } else {
               console.error("No such template!");
@@ -80,24 +91,6 @@ const Room: React.FC = () => {
 
     fetchRoomData();
   }, [roomId]);
-
-  useEffect(() => {
-    socket.on("receiveMessage", (comment: Comment) => {
-      setComments((prevComments) => ({
-        ...prevComments,
-        [comment.id]: [...(prevComments[comment.id] || []), comment],
-      }));
-    });
-
-    socket.on("finalizeComments", () => {
-      setIsFinalized(true);
-    });
-
-    return () => {
-      socket.off("receiveMessage");
-      socket.off("finalizeComments");
-    };
-  }, []);
 
   const fetchComments = (roomId: string) => {
     const commentsQuery = query(collection(db, "comments"), where("room_id", "==", roomId));
@@ -115,13 +108,9 @@ const Room: React.FC = () => {
   };
 
   const sendComment = async (stepId: string) => {
-    if (!stepId || !newComments[stepId]) {
-      console.error("Invalid stepId or comment content");
-      return;
-    }
+    const comment = { id: stepId, message: newComments[stepId], userId: socketId };
 
-    const comment = { id: stepId, message: newComments[stepId], userId };
-
+    // Yorumları Firebase'e kaydetme
     try {
       await addDoc(collection(db, "comments"), {
         comment: comment.message,
@@ -129,20 +118,17 @@ const Room: React.FC = () => {
         likes: 0,
         room_id: roomId,
         step_id: stepId,
-        userId: userId,
       });
-
-      socket.emit("sendMessage", comment);
-
-      setComments((prevComments) => ({
-        ...prevComments,
-        [stepId]: [...(prevComments[stepId] || []), comment],
-      }));
-
-      setNewComments((prevComments) => ({ ...prevComments, [stepId]: "" }));
     } catch (error) {
-      console.error("Error adding document or emitting socket event: ", error);
+      console.error("Error adding document: ", error);
     }
+
+    socket.emit("sendMessage", comment);
+    setComments((prevComments) => ({
+      ...prevComments,
+      [stepId]: [...(prevComments[stepId] || []), comment],
+    }));
+    setNewComments((prevComments) => ({ ...prevComments, [stepId]: "" }));
   };
 
   const finalizeComments = () => {
@@ -159,7 +145,7 @@ const Room: React.FC = () => {
               dataSource={comments[step.id] || []}
               renderItem={(comment) => (
                 <List.Item>
-                  {comment.userId !== userId ? (
+                  {comment.userId !== socketId ? (
                     <Skeleton active paragraph={{ rows: 1, width: "80%" }}>
                       <div
                         style={{
@@ -207,7 +193,7 @@ const Room: React.FC = () => {
       ) : (
         <p>Loading steps...</p>
       )}
-      {templateOwnerId === userId && (
+      {templateOwnerId === socketId && (
         <Button type="default" onClick={finalizeComments} disabled={isFinalized}>
           Sonuçlandır
         </Button>
