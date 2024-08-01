@@ -27,7 +27,7 @@ const GoogleLogin: React.FC = () => {
       }
 
       console.log("User logged in and data saved:", user);
-      router.push("/create-room"); 
+      router.push("/"); 
     } catch (error) {
       console.error("Error logging in with Google:", error);
     }

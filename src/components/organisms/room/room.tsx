@@ -7,12 +7,20 @@ import { db } from "@/firebaseConfig";
 import { collection, addDoc, getDoc, doc, query, where, onSnapshot } from "firebase/firestore";
 
 const socket = io("http://localhost:3001");
-const userId = uuidv4();
+let userId: string;
+
+if (typeof window !== "undefined") {
+  userId = localStorage.getItem("user_id") || uuidv4();
+  localStorage.setItem("user_id", userId);
+} else {
+  userId = uuidv4();
+}
 
 interface Comment {
   id: string;
   message: string;
   userId: string;
+  step_id: string;
 }
 
 interface Step {
@@ -28,6 +36,21 @@ const Room: React.FC = () => {
   const [templateOwnerId, setTemplateOwnerId] = useState<string | null>(null);
   const router = useRouter();
   const { roomId } = router.query;
+
+  const fetchComments = (roomId: string) => {
+    const commentsQuery = query(collection(db, "comments"), where("room_id", "==", roomId));
+    onSnapshot(commentsQuery, (snapshot) => {
+      const commentsData: { [key: string]: Comment[] } = {};
+      snapshot.forEach((doc) => {
+        const data = doc.data() as Comment;
+        if (!commentsData[data.step_id]) {
+          commentsData[data.step_id] = [];
+        }
+        commentsData[data.step_id].push(data);
+      });
+      setComments(commentsData);
+    });
+  };
 
   useEffect(() => {
     const fetchRoomData = async () => {
@@ -71,10 +94,15 @@ const Room: React.FC = () => {
 
   useEffect(() => {
     socket.on("receiveMessage", (comment: Comment) => {
-      setComments((prevComments) => ({
-        ...prevComments,
-        [comment.id]: [...(prevComments[comment.id] || []), comment],
-      }));
+      setComments((prevComments) => {
+        const currentComments = prevComments[comment.step_id] || [];
+        const isAlreadyAdded = currentComments.some(c => c.id === comment.id);
+        if (isAlreadyAdded) return prevComments;
+        return {
+          ...prevComments,
+          [comment.step_id]: [...currentComments, comment],
+        };
+      });
     });
 
     socket.on("finalizeComments", () => {
@@ -87,31 +115,13 @@ const Room: React.FC = () => {
     };
   }, []);
 
-  const fetchComments = (roomId: string) => {
-    const commentsQuery = query(collection(db, "comments"), where("room_id", "==", roomId));
-    onSnapshot(commentsQuery, (snapshot) => {
-      const commentsData: { [key: string]: Comment[] } = {};
-      snapshot.forEach((doc) => {
-        const data = doc.data() as Comment;
-        if (!commentsData[data.id]) {
-          commentsData[data.id] = [];
-        }
-        commentsData[data.id].push(data);
-      });
-      setComments(commentsData);
-    });
-  };
-
   const sendComment = async (stepId: string) => {
-    const comment = { id: stepId, message: newComments[stepId], userId };
+    const comment = { id: uuidv4(), message: newComments[stepId], userId, step_id: stepId };
 
     try {
       await addDoc(collection(db, "comments"), {
-        comment: comment.message,
-        group_id: null,
-        likes: 0,
+        ...comment,
         room_id: roomId,
-        step_id: stepId,
       });
     } catch (error) {
       console.error("Error adding document: ", error);
@@ -123,6 +133,9 @@ const Room: React.FC = () => {
       [stepId]: [...(prevComments[stepId] || []), comment],
     }));
     setNewComments((prevComments) => ({ ...prevComments, [stepId]: "" }));
+
+    // Sayfayı yenile
+    window.location.reload();
   };
 
   const finalizeComments = () => {
