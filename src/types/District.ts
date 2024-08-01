@@ -1,7 +1,7 @@
-type District = {
-    cityId: string;
-    id: string;
-    autoId: string;
-    name: string;
-    refAdminId: string;
-  }
+export type District = {
+  cityId: string;
+  id: string;
+  autoId: string;
+  name: string;
+  refAdminId: string;
+};

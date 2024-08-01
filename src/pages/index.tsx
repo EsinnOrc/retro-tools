@@ -4,13 +4,30 @@ import { Button, Layout, Menu, Card, message } from "antd";
 import GoogleLogin from "@/components/googleLogin";
 import { onAuthStateChanged, User, signOut } from "firebase/auth";
 import { auth, db } from "@/firebaseConfig";
-import { getFirestore, collection, getDocs, query, where, addDoc } from "firebase/firestore";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  query,
+  where,
+  addDoc,
+} from "firebase/firestore";
 
 const { Header, Content, Footer } = Layout;
 
+interface Step {
+  name: string;
+}
+
+interface Template {
+  id: string;
+  name: string;
+  step_names?: Step[];
+}
+
 const Home: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [templates, setTemplates] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -32,7 +49,7 @@ const Home: React.FC = () => {
           const templatesList = templatesSnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
-          }));
+          })) as Template[];
           setTemplates(templatesList);
         } catch (error) {
           console.error("Error fetching templates:", error);
