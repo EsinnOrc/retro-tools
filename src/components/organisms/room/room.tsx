@@ -4,7 +4,15 @@ import { List, Input, Button, Skeleton } from "antd";
 import io from "socket.io-client";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/firebaseConfig";
-import { collection, addDoc, getDoc, doc, query, where, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  getDoc,
+  doc,
+  query,
+  where,
+  onSnapshot,
+} from "firebase/firestore";
 
 const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
 const socket = io(socketUrl);
@@ -39,7 +47,10 @@ const Room: React.FC = () => {
   const { roomId } = router.query;
 
   const fetchComments = (roomId: string) => {
-    const commentsQuery = query(collection(db, "comments"), where("room_id", "==", roomId));
+    const commentsQuery = query(
+      collection(db, "comments"),
+      where("room_id", "==", roomId)
+    );
     onSnapshot(commentsQuery, (snapshot) => {
       const commentsData: { [key: string]: Comment[] } = {};
       snapshot.forEach((doc) => {
@@ -97,7 +108,7 @@ const Room: React.FC = () => {
     socket.on("receiveMessage", (comment: Comment) => {
       setComments((prevComments) => {
         const currentComments = prevComments[comment.step_id] || [];
-        const isAlreadyAdded = currentComments.some(c => c.id === comment.id);
+        const isAlreadyAdded = currentComments.some((c) => c.id === comment.id);
         if (isAlreadyAdded) return prevComments;
         return {
           ...prevComments,
@@ -117,7 +128,12 @@ const Room: React.FC = () => {
   }, []);
 
   const sendComment = async (stepId: string) => {
-    const comment = { id: uuidv4(), message: newComments[stepId], userId, step_id: stepId };
+    const comment = {
+      id: uuidv4(),
+      message: newComments[stepId],
+      userId,
+      step_id: stepId,
+    };
 
     try {
       await addDoc(collection(db, "comments"), {
@@ -134,9 +150,6 @@ const Room: React.FC = () => {
       [stepId]: [...(prevComments[stepId] || []), comment],
     }));
     setNewComments((prevComments) => ({ ...prevComments, [stepId]: "" }));
-
-    // Sayfayı yenile
-    window.location.reload();
   };
 
   const finalizeComments = () => {
@@ -202,7 +215,11 @@ const Room: React.FC = () => {
         <p>Loading steps...</p>
       )}
       {templateOwnerId === userId && (
-        <Button type="default" onClick={finalizeComments} disabled={isFinalized}>
+        <Button
+          type="default"
+          onClick={finalizeComments}
+          disabled={isFinalized}
+        >
           Sonuçlandır
         </Button>
       )}
