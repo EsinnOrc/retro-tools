@@ -6,8 +6,12 @@ import { v4 as uuidv4 } from "uuid";
 import { db } from "@/firebaseConfig";
 import { collection, addDoc, getDoc, doc, query, where, onSnapshot } from "firebase/firestore";
 
-const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
+const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
+if (!socketUrl) {
+  throw new Error("NEXT_PUBLIC_SOCKET_URL is not defined");
+}
 const socket = io(socketUrl);
+
 let userId: string;
 
 if (typeof window !== "undefined") {
@@ -134,9 +138,6 @@ const Room: React.FC = () => {
       [stepId]: [...(prevComments[stepId] || []), comment],
     }));
     setNewComments((prevComments) => ({ ...prevComments, [stepId]: "" }));
-
-    // Sayfayı yenile
-    window.location.reload();
   };
 
   const finalizeComments = () => {

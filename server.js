@@ -8,13 +8,14 @@ const app = next({ dev });
 const handle = app.getRequestHandler();
 
 const PORT = process.env.PORT || 3001;
+const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:3000";
 
 app.prepare().then(() => {
   const server = express();
   const httpServer = http.createServer(server);
   const io = socketIo(httpServer, {
     cors: {
-      origin: "http://localhost:3000",
+      origin: CLIENT_URL,
       methods: ["GET", "POST"],
       credentials: true,
     }
