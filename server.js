@@ -9,6 +9,7 @@ const app = next({ dev });
 const handle = app.getRequestHandler();
 
 const PORT = process.env.PORT || 3001;
+const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:3000";
 
 const allowedOrigins = [process.env.NEXT_PUBLIC_CLIENT_URL];
 
