@@ -4,15 +4,8 @@ import { List, Input, Button, Skeleton } from "antd";
 import io from "socket.io-client";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/firebaseConfig";
-import {
-  collection,
-  addDoc,
-  getDoc,
-  doc,
-  query,
-  where,
-  onSnapshot,
-} from "firebase/firestore";
+import { collection, addDoc, getDoc, doc, query, where, onSnapshot } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
 if (!socketUrl) {
@@ -20,13 +13,13 @@ if (!socketUrl) {
 }
 const socket = io(socketUrl);
 
-let userId: string;
+const auth = getAuth();
+const actualUserId = auth.currentUser?.uid || (typeof window !== "undefined" ? localStorage.getItem("user_id") || uuidv4() : uuidv4());
+const tempUserId = (typeof window !== "undefined" ? localStorage.getItem("temp_user_id") || uuidv4() : uuidv4());
 
 if (typeof window !== "undefined") {
-  userId = localStorage.getItem("user_id") || uuidv4();
-  localStorage.setItem("user_id", userId);
-} else {
-  userId = uuidv4();
+  localStorage.setItem("user_id", actualUserId);
+  localStorage.setItem("temp_user_id", tempUserId);
 }
 
 interface Comment {
@@ -85,6 +78,8 @@ const Room: React.FC = () => {
             if (templateDoc.exists()) {
               const templateData = templateDoc.data();
               setTemplateOwnerId(templateData.user_id);
+              console.log("Template Owner ID:", templateData.user_id);
+              console.log("Actual User ID:", actualUserId);
 
               const stepsList = templateData.step_names.map((step: any) => ({
                 id: step.id,
@@ -135,7 +130,7 @@ const Room: React.FC = () => {
     const comment = {
       id: uuidv4(),
       message: newComments[stepId],
-      userId,
+      userId: tempUserId,
       step_id: stepId,
     };
 
@@ -167,7 +162,7 @@ const Room: React.FC = () => {
               dataSource={comments[step.id] || []}
               renderItem={(comment) => (
                 <List.Item>
-                  {comment.userId !== userId ? (
+                  {comment.userId !== tempUserId ? (
                     <Skeleton active paragraph={{ rows: 1, width: "80%" }}>
                       <div
                         style={{
@@ -215,7 +210,7 @@ const Room: React.FC = () => {
       ) : (
         <p>Loading steps...</p>
       )}
-      {templateOwnerId === userId && (
+      {templateOwnerId === actualUserId && (
         <Button
           type="default"
           onClick={finalizeComments}
