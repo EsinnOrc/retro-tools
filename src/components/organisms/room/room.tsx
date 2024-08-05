@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { List, Input, Button, Skeleton } from "antd";
+import { List, Input, Skeleton, Button } from "antd";
 import io from "socket.io-client";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/firebaseConfig";
-import { collection, addDoc, getDoc, doc, query, where, onSnapshot } from "firebase/firestore";
+import { collection, addDoc, getDoc, doc, query, where, onSnapshot, updateDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import Swal from 'sweetalert2';
+import { LikeOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons';
 
 const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
 if (!socketUrl) {
@@ -27,6 +29,7 @@ interface Comment {
   message: string;
   userId: string;
   step_id: string;
+  likes: number;
 }
 
 interface Step {
@@ -40,6 +43,7 @@ const Room: React.FC = () => {
   const [isFinalized, setIsFinalized] = useState(false);
   const [steps, setSteps] = useState<Step[]>([]);
   const [templateOwnerId, setTemplateOwnerId] = useState<string | null>(null);
+  const [isActive, setIsActive] = useState(true);
   const router = useRouter();
   const { roomId } = router.query;
 
@@ -71,6 +75,7 @@ const Room: React.FC = () => {
           if (roomDoc.exists()) {
             const roomData = roomDoc.data();
             const templateId = roomData.template_id;
+            setIsActive(roomData.is_active);
 
             const templateRef = doc(db, "templates", templateId);
             const templateDoc = await getDoc(templateRef);
@@ -78,8 +83,6 @@ const Room: React.FC = () => {
             if (templateDoc.exists()) {
               const templateData = templateDoc.data();
               setTemplateOwnerId(templateData.user_id);
-              console.log("Template Owner ID:", templateData.user_id);
-              console.log("Actual User ID:", actualUserId);
 
               const stepsList = templateData.step_names.map((step: any) => ({
                 id: step.id,
@@ -132,6 +135,7 @@ const Room: React.FC = () => {
       message: newComments[stepId],
       userId: tempUserId,
       step_id: stepId,
+      likes: 0,
     };
 
     try {
@@ -149,7 +153,58 @@ const Room: React.FC = () => {
   };
 
   const finalizeComments = () => {
-    socket.emit("finalize");
+    Swal.fire({
+      title: 'Emin misiniz?',
+      text: "Bu işlemi geri alamazsınız!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Evet, sonuçlandır!',
+      cancelButtonText: 'Hayır, iptal et'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const roomRef = doc(db, "rooms", roomId as string);
+          await updateDoc(roomRef, {
+            is_active: false,
+          });
+          setIsActive(false);
+          setIsFinalized(true);
+          Swal.fire(
+            'Sonuçlandırıldı!',
+            'Yorumlar başarıyla sonuçlandırıldı.',
+            'success'
+          );
+        } catch (error) {
+          console.error("Error updating document: ", error);
+        }
+      }
+    });
+  };
+
+  const updateCommentLikes = async (commentId: string, stepId: string, change: number) => {
+    const commentRef = doc(db, "comments", commentId);
+    try {
+      const commentDoc = await getDoc(commentRef);
+      if (commentDoc.exists()) {
+        const commentData = commentDoc.data();
+        await updateDoc(commentRef, {
+          likes: (commentData.likes || 0) + change,
+        });
+        setComments((prevComments) => {
+          const updatedComments = prevComments[stepId].map((comment) => {
+            if (comment.id === commentId) {
+              return { ...comment, likes: (comment.likes || 0) + change };
+            }
+            return comment;
+          });
+          return { ...prevComments, [stepId]: updatedComments };
+        });
+      }
+    } catch (error) {
+      console.error("Error updating comment likes: ", error);
+    }
   };
 
   return (
@@ -163,17 +218,23 @@ const Room: React.FC = () => {
               renderItem={(comment) => (
                 <List.Item>
                   {comment.userId !== tempUserId ? (
-                    <Skeleton active paragraph={{ rows: 1, width: "80%" }}>
-                      <div
-                        style={{
-                          filter: "blur(4px)",
-                          fontWeight: "normal",
-                          color: "black",
-                        }}
-                      >
+                    isActive ? (
+                      <Skeleton active paragraph={{ rows: 1, width: "80%" }}>
+                        <div
+                          style={{
+                            filter: "blur(4px)",
+                            fontWeight: "normal",
+                            color: "black",
+                          }}
+                        >
+                          {comment.message}
+                        </div>
+                      </Skeleton>
+                    ) : (
+                      <div style={{ fontWeight: "normal", color: "black" }}>
                         {comment.message}
                       </div>
-                    </Skeleton>
+                    )
                   ) : (
                     <div
                       style={{
@@ -182,6 +243,26 @@ const Room: React.FC = () => {
                       }}
                     >
                       {comment.message}
+                    </div>
+                  )}
+                  {!isActive && (
+                    <div style={{ display: "flex", alignItems: "center" }}>
+                      <Button
+                        icon={<LikeOutlined />}
+                        onClick={() => updateCommentLikes(comment.id, comment.step_id, 1)}
+                        style={{ marginRight: 8 }}
+                      >
+                        {comment.likes}
+                      </Button>
+                      <Button
+                        icon={<PlusOutlined />}
+                        onClick={() => updateCommentLikes(comment.id, comment.step_id, 1)}
+                        style={{ marginRight: 8 }}
+                      />
+                      <Button
+                        icon={<MinusOutlined />}
+                        onClick={() => updateCommentLikes(comment.id, comment.step_id, -1)}
+                      />
                     </div>
                   )}
                 </List.Item>
@@ -196,25 +277,26 @@ const Room: React.FC = () => {
                 }))
               }
               placeholder="yorum yap"
-              disabled={isFinalized}
+              disabled={!isActive}
+              style={{ display: isActive ? "block" : "none" }}
             />
-            <Button
-              type="primary"
-              onClick={() => sendComment(step.id)}
-              disabled={isFinalized}
-            >
-              Gönder
-            </Button>
+            {isActive && (
+              <Button
+                type="primary"
+                onClick={() => sendComment(step.id)}
+              >
+                Gönder
+              </Button>
+            )}
           </div>
         ))
       ) : (
         <p>Loading steps...</p>
       )}
-      {templateOwnerId === actualUserId && (
+      {templateOwnerId === actualUserId && isActive && (
         <Button
           type="default"
           onClick={finalizeComments}
-          disabled={isFinalized}
         >
           Sonuçlandır
         </Button>
