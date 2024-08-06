@@ -7,7 +7,7 @@ import { db } from "@/firebaseConfig";
 import { collection, addDoc, getDoc, doc, query, where, onSnapshot, updateDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import Swal from 'sweetalert2';
-import { LikeOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons';
+import { LikeOutlined, DislikeOutlined } from '@ant-design/icons';
 
 const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
 if (!socketUrl) {
@@ -30,6 +30,8 @@ interface Comment {
   userId: string;
   step_id: string;
   likes: number;
+  dislikes: number;
+  created_at: Date;
 }
 
 interface Step {
@@ -59,7 +61,10 @@ const Room: React.FC = () => {
         if (!commentsData[data.step_id]) {
           commentsData[data.step_id] = [];
         }
-        commentsData[data.step_id].push(data);
+        commentsData[data.step_id].push({ ...data, created_at: data.created_at.toDate() });
+      });
+      Object.keys(commentsData).forEach(stepId => {
+        commentsData[stepId].sort((a, b) => a.created_at.getTime() - b.created_at.getTime());
       });
       setComments(commentsData);
     });
@@ -136,6 +141,8 @@ const Room: React.FC = () => {
       userId: tempUserId,
       step_id: stepId,
       likes: 0,
+      dislikes: 0,
+      created_at: new Date(),
     };
 
     try {
@@ -189,13 +196,12 @@ const Room: React.FC = () => {
       const commentDoc = await getDoc(commentRef);
       if (commentDoc.exists()) {
         const commentData = commentDoc.data();
-        await updateDoc(commentRef, {
-          likes: (commentData.likes || 0) + change,
-        });
+        const updatedData = change === 1 ? { likes: (commentData.likes || 0) + change } : { dislikes: (commentData.dislikes || 0) + change };
+        await updateDoc(commentRef, updatedData);
         setComments((prevComments) => {
           const updatedComments = prevComments[stepId].map((comment) => {
             if (comment.id === commentId) {
-              return { ...comment, likes: (comment.likes || 0) + change };
+              return { ...comment, ...updatedData };
             }
             return comment;
           });
@@ -203,7 +209,7 @@ const Room: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error("Error updating comment likes: ", error);
+      console.error("Error updating comment likes/dislikes: ", error);
     }
   };
 
@@ -219,7 +225,7 @@ const Room: React.FC = () => {
                 <List.Item>
                   {comment.userId !== tempUserId ? (
                     isActive ? (
-                      <Skeleton active paragraph={{ rows: 1, width: "80%" }}>
+                      <Skeleton active paragraph={{ rows: Math.ceil(comment.message.length / 20), width: "80%" }}>
                         <div
                           style={{
                             filter: "blur(4px)",
@@ -255,14 +261,11 @@ const Room: React.FC = () => {
                         {comment.likes}
                       </Button>
                       <Button
-                        icon={<PlusOutlined />}
-                        onClick={() => updateCommentLikes(comment.id, comment.step_id, 1)}
-                        style={{ marginRight: 8 }}
-                      />
-                      <Button
-                        icon={<MinusOutlined />}
+                        icon={<DislikeOutlined />}
                         onClick={() => updateCommentLikes(comment.id, comment.step_id, -1)}
-                      />
+                      >
+                        {comment.dislikes}
+                      </Button>
                     </div>
                   )}
                 </List.Item>
