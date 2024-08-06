@@ -4,7 +4,7 @@ import { List, Input, Skeleton, Button } from "antd";
 import io from "socket.io-client";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/firebaseConfig";
-import { collection, addDoc, getDoc, doc, query, where, onSnapshot, updateDoc } from "firebase/firestore";
+import { collection, getDocs, getDoc, doc, query, where, onSnapshot, updateDoc, increment, setDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import Swal from 'sweetalert2';
 import { LikeOutlined, DislikeOutlined } from '@ant-design/icons';
@@ -32,6 +32,8 @@ interface Comment {
   likes: number;
   dislikes: number;
   created_at: Date;
+  room_id: string;
+  userVotes: { [key: string]: number }; // Yeni eklenen alan
 }
 
 interface Step {
@@ -46,6 +48,8 @@ const Room: React.FC = () => {
   const [steps, setSteps] = useState<Step[]>([]);
   const [templateOwnerId, setTemplateOwnerId] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(true);
+  const [totalVotes, setTotalVotes] = useState<number>(0);
+  const [userVotes, setUserVotes] = useState<{ [key: string]: number }>({});
   const router = useRouter();
   const { roomId } = router.query;
 
@@ -134,22 +138,48 @@ const Room: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const fetchUserVotes = async () => {
+      if (roomId && actualUserId) {
+        const commentsQuery = query(
+          collection(db, "comments"),
+          where("room_id", "==", roomId)
+        );
+        const snapshot = await getDocs(commentsQuery);
+
+        const userVotesData: { [key: string]: number } = {};
+        snapshot.forEach((doc) => {
+          const data = doc.data() as Comment;
+          if (data.userVotes && data.userVotes[actualUserId]) {
+            userVotesData[doc.id] = data.userVotes[actualUserId];
+          }
+        });
+
+        setUserVotes(userVotesData);
+        setTotalVotes(Object.keys(userVotesData).length);
+      }
+    };
+
+    fetchUserVotes();
+  }, [roomId, actualUserId]);
+
   const sendComment = async (stepId: string) => {
+    const commentId = uuidv4();
     const comment = {
-      id: uuidv4(),
+      id: commentId,
       message: newComments[stepId],
       userId: tempUserId,
       step_id: stepId,
       likes: 0,
       dislikes: 0,
       created_at: new Date(),
+      room_id: roomId,
+      userVotes: {} // Yeni eklenen alan
     };
 
     try {
-      await addDoc(collection(db, "comments"), {
-        ...comment,
-        room_id: roomId,
-      });
+      await setDoc(doc(db, "comments", commentId), comment);
+      console.log("Document written with ID: ", commentId);
     } catch (error) {
       console.error("Error adding document: ", error);
     }
@@ -190,26 +220,62 @@ const Room: React.FC = () => {
     });
   };
 
-  const updateCommentLikes = async (commentId: string, stepId: string, change: number) => {
+  const updateCommentLikes = async (commentId: string, stepId: string, newVote: number) => {
     const commentRef = doc(db, "comments", commentId);
     try {
       const commentDoc = await getDoc(commentRef);
       if (commentDoc.exists()) {
-        const commentData = commentDoc.data();
-        const updatedData = change === 1 ? { likes: (commentData.likes || 0) + change } : { dislikes: (commentData.dislikes || 0) + change };
-        await updateDoc(commentRef, updatedData);
+        const commentData = commentDoc.data() as Comment;
+        const currentVote = commentData.userVotes ? commentData.userVotes[actualUserId] : 0;
+
+        // Eğer aynı oya tıklanmışsa, uyarı göster
+        if (currentVote === newVote) {
+          Swal.fire({
+            title: 'Hata',
+            text: 'Bu yoruma zaten oy verdiniz.',
+            icon: 'error',
+            confirmButtonText: 'Tamam'
+          });
+          return;
+        }
+
+        // Oy değiştirilmişse, eski oyu kaldır ve yeni oyu ekle
+        const updates: any = {
+          likes: increment(newVote === 1 ? 1 : currentVote === 1 ? -1 : 0),
+          dislikes: increment(newVote === -1 ? 1 : currentVote === -1 ? -1 : 0),
+          [`userVotes.${actualUserId}`]: newVote
+        };
+
+        await updateDoc(commentRef, updates);
+
+        // State'i güncellerken önce Firestore'u kontrol et
+        const updatedCommentDoc = await getDoc(commentRef);
+        const updatedCommentData = updatedCommentDoc.data() as Comment;
+
         setComments((prevComments) => {
           const updatedComments = prevComments[stepId].map((comment) => {
             if (comment.id === commentId) {
-              return { ...comment, ...updatedData };
+              return {
+                ...comment,
+                likes: updatedCommentData.likes,
+                dislikes: updatedCommentData.dislikes,
+                userVotes: updatedCommentData.userVotes
+              };
             }
             return comment;
           });
           return { ...prevComments, [stepId]: updatedComments };
         });
+
+        setUserVotes((prevVotes) => ({
+          ...prevVotes,
+          [commentId]: newVote
+        }));
+      } else {
+        console.error("No document to update:", commentId);
       }
     } catch (error) {
-      console.error("Error updating comment likes/dislikes: ", error);
+      console.error("Error updating comment likes/dislikes:", error);
     }
   };
 
@@ -257,12 +323,14 @@ const Room: React.FC = () => {
                         icon={<LikeOutlined />}
                         onClick={() => updateCommentLikes(comment.id, comment.step_id, 1)}
                         style={{ marginRight: 8 }}
+                        disabled={userVotes[comment.id] === 1}
                       >
                         {comment.likes}
                       </Button>
                       <Button
                         icon={<DislikeOutlined />}
                         onClick={() => updateCommentLikes(comment.id, comment.step_id, -1)}
+                        disabled={userVotes[comment.id] === -1}
                       >
                         {comment.dislikes}
                       </Button>
