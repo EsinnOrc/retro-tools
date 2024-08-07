@@ -1,45 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { List, Input, Skeleton, Button } from "antd";
 import io from "socket.io-client";
-import { v4 as uuidv4 } from "uuid";
-import { db } from "@/firebaseConfig";
-import { collection, getDocs, getDoc, doc, query, where, onSnapshot, updateDoc, increment, setDoc } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { auth } from "@/firebaseConfig";
+import { onAuthStateChanged } from "firebase/auth";
 import Swal from 'sweetalert2';
-import { LikeOutlined, DislikeOutlined } from '@ant-design/icons';
+import { v4 as uuidv4 } from "uuid";
+import StepList from "./stepList";
+import FinalizeButton from "./finalizeButton";
+import { fetchComments, fetchRoomData, initializeSocket, fetchUserVotes } from "./utils";
+import { Comment, Step } from "./utils";
 
 const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
 if (!socketUrl) {
   throw new Error("NEXT_PUBLIC_SOCKET_URL is not defined");
 }
 const socket = io(socketUrl);
-
-const auth = getAuth();
-const actualUserId = auth.currentUser?.uid || (typeof window !== "undefined" ? localStorage.getItem("user_id") || uuidv4() : uuidv4());
-const tempUserId = (typeof window !== "undefined" ? localStorage.getItem("temp_user_id") || uuidv4() : uuidv4());
-
-if (typeof window !== "undefined") {
-  localStorage.setItem("user_id", actualUserId);
-  localStorage.setItem("temp_user_id", tempUserId);
-}
-
-interface Comment {
-  id: string;
-  message: string;
-  userId: string;
-  step_id: string;
-  likes: number;
-  dislikes: number;
-  created_at: Date;
-  room_id: string;
-  userVotes: { [key: string]: number }; // Yeni eklenen alan
-}
-
-interface Step {
-  id: string;
-  name: string;
-}
 
 const Room: React.FC = () => {
   const [comments, setComments] = useState<{ [key: string]: Comment[] }>({});
@@ -50,88 +25,44 @@ const Room: React.FC = () => {
   const [isActive, setIsActive] = useState(true);
   const [totalVotes, setTotalVotes] = useState<number>(0);
   const [userVotes, setUserVotes] = useState<{ [key: string]: number }>({});
+  const [actualUserId, setActualUserId] = useState<string>("");
+  const [tempUserId, setTempUserId] = useState<string>("");
   const router = useRouter();
   const { roomId } = router.query;
 
-  const fetchComments = (roomId: string) => {
-    const commentsQuery = query(
-      collection(db, "comments"),
-      where("room_id", "==", roomId)
-    );
-    onSnapshot(commentsQuery, (snapshot) => {
-      const commentsData: { [key: string]: Comment[] } = {};
-      snapshot.forEach((doc) => {
-        const data = doc.data() as Comment;
-        if (!commentsData[data.step_id]) {
-          commentsData[data.step_id] = [];
-        }
-        commentsData[data.step_id].push({ ...data, created_at: data.created_at.toDate() });
-      });
-      Object.keys(commentsData).forEach(stepId => {
-        commentsData[stepId].sort((a, b) => a.created_at.getTime() - b.created_at.getTime());
-      });
-      setComments(commentsData);
+  useEffect(() => {
+    const storedUserId = typeof window !== "undefined" ? localStorage.getItem("user_id") : null;
+    const storedTempUserId = typeof window !== "undefined" ? localStorage.getItem("temp_user_id") : null;
+
+    const userId = storedUserId || uuidv4();
+    const tempId = storedTempUserId || uuidv4();
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("user_id", userId);
+      localStorage.setItem("temp_user_id", tempId);
+    }
+
+    setActualUserId(userId);
+    setTempUserId(tempId);
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setActualUserId(user.uid);
+        localStorage.setItem("user_id", user.uid);
+      }
     });
-  };
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
-    const fetchRoomData = async () => {
-      if (roomId) {
-        try {
-          const roomRef = doc(db, "rooms", roomId as string);
-          const roomDoc = await getDoc(roomRef);
-
-          if (roomDoc.exists()) {
-            const roomData = roomDoc.data();
-            const templateId = roomData.template_id;
-            setIsActive(roomData.is_active);
-
-            const templateRef = doc(db, "templates", templateId);
-            const templateDoc = await getDoc(templateRef);
-
-            if (templateDoc.exists()) {
-              const templateData = templateDoc.data();
-              setTemplateOwnerId(templateData.user_id);
-
-              const stepsList = templateData.step_names.map((step: any) => ({
-                id: step.id,
-                name: step.name,
-              }));
-              setSteps(stepsList);
-
-              fetchComments(roomId as string);
-            } else {
-              console.error("No such template!");
-            }
-          } else {
-            console.error("No such room!");
-          }
-        } catch (error) {
-          console.error("Error fetching room data:", error);
-        }
-      }
-    };
-
-    fetchRoomData();
+    if (roomId && typeof roomId === "string") {
+      fetchRoomData(roomId, setTemplateOwnerId, setSteps, setIsActive, fetchComments, setComments);
+    }
   }, [roomId]);
 
   useEffect(() => {
-    socket.on("receiveMessage", (comment: Comment) => {
-      setComments((prevComments) => {
-        const currentComments = prevComments[comment.step_id] || [];
-        const isAlreadyAdded = currentComments.some((c) => c.id === comment.id);
-        if (isAlreadyAdded) return prevComments;
-        return {
-          ...prevComments,
-          [comment.step_id]: [...currentComments, comment],
-        };
-      });
-    });
-
-    socket.on("finalizeComments", () => {
-      setIsFinalized(true);
-    });
-
+    initializeSocket(socket, setComments, setIsFinalized);
     return () => {
       socket.off("receiveMessage");
       socket.off("finalizeComments");
@@ -139,239 +70,35 @@ const Room: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const fetchUserVotes = async () => {
-      if (roomId && actualUserId) {
-        const commentsQuery = query(
-          collection(db, "comments"),
-          where("room_id", "==", roomId)
-        );
-        const snapshot = await getDocs(commentsQuery);
-
-        const userVotesData: { [key: string]: number } = {};
-        snapshot.forEach((doc) => {
-          const data = doc.data() as Comment;
-          if (data.userVotes && data.userVotes[actualUserId]) {
-            userVotesData[doc.id] = data.userVotes[actualUserId];
-          }
-        });
-
-        setUserVotes(userVotesData);
-        setTotalVotes(Object.keys(userVotesData).length);
-      }
-    };
-
-    fetchUserVotes();
+    if (roomId && typeof roomId === "string" && actualUserId) {
+      fetchUserVotes(roomId, actualUserId, setUserVotes, setTotalVotes);
+    }
   }, [roomId, actualUserId]);
-
-  const sendComment = async (stepId: string) => {
-    const commentId = uuidv4();
-    const comment = {
-      id: commentId,
-      message: newComments[stepId],
-      userId: tempUserId,
-      step_id: stepId,
-      likes: 0,
-      dislikes: 0,
-      created_at: new Date(),
-      room_id: roomId,
-      userVotes: {} // Yeni eklenen alan
-    };
-
-    try {
-      await setDoc(doc(db, "comments", commentId), comment);
-      console.log("Document written with ID: ", commentId);
-    } catch (error) {
-      console.error("Error adding document: ", error);
-    }
-
-    socket.emit("sendMessage", comment);
-
-    setNewComments((prevComments) => ({ ...prevComments, [stepId]: "" }));
-  };
-
-  const finalizeComments = () => {
-    Swal.fire({
-      title: 'Emin misiniz?',
-      text: "Bu işlemi geri alamazsınız!",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Evet, sonuçlandır!',
-      cancelButtonText: 'Hayır, iptal et'
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          const roomRef = doc(db, "rooms", roomId as string);
-          await updateDoc(roomRef, {
-            is_active: false,
-          });
-          setIsActive(false);
-          setIsFinalized(true);
-          Swal.fire(
-            'Sonuçlandırıldı!',
-            'Yorumlar başarıyla sonuçlandırıldı.',
-            'success'
-          );
-        } catch (error) {
-          console.error("Error updating document: ", error);
-        }
-      }
-    });
-  };
-
-  const updateCommentLikes = async (commentId: string, stepId: string, newVote: number) => {
-    const commentRef = doc(db, "comments", commentId);
-    try {
-      const commentDoc = await getDoc(commentRef);
-      if (commentDoc.exists()) {
-        const commentData = commentDoc.data() as Comment;
-        const currentVote = commentData.userVotes ? commentData.userVotes[actualUserId] : 0;
-
-        // Eğer aynı oya tıklanmışsa, uyarı göster
-        if (currentVote === newVote) {
-          Swal.fire({
-            title: 'Hata',
-            text: 'Bu yoruma zaten oy verdiniz.',
-            icon: 'error',
-            confirmButtonText: 'Tamam'
-          });
-          return;
-        }
-
-        // Oy değiştirilmişse, eski oyu kaldır ve yeni oyu ekle
-        const updates: any = {
-          likes: increment(newVote === 1 ? 1 : currentVote === 1 ? -1 : 0),
-          dislikes: increment(newVote === -1 ? 1 : currentVote === -1 ? -1 : 0),
-          [`userVotes.${actualUserId}`]: newVote
-        };
-
-        await updateDoc(commentRef, updates);
-
-        // State'i güncellerken önce Firestore'u kontrol et
-        const updatedCommentDoc = await getDoc(commentRef);
-        const updatedCommentData = updatedCommentDoc.data() as Comment;
-
-        setComments((prevComments) => {
-          const updatedComments = prevComments[stepId].map((comment) => {
-            if (comment.id === commentId) {
-              return {
-                ...comment,
-                likes: updatedCommentData.likes,
-                dislikes: updatedCommentData.dislikes,
-                userVotes: updatedCommentData.userVotes
-              };
-            }
-            return comment;
-          });
-          return { ...prevComments, [stepId]: updatedComments };
-        });
-
-        setUserVotes((prevVotes) => ({
-          ...prevVotes,
-          [commentId]: newVote
-        }));
-      } else {
-        console.error("No document to update:", commentId);
-      }
-    } catch (error) {
-      console.error("Error updating comment likes/dislikes:", error);
-    }
-  };
 
   return (
     <div>
-      {steps.length > 0 ? (
-        steps.map((step) => (
-          <div key={step.id} style={{ marginBottom: "20px" }}>
-            <h4>{step.name}</h4>
-            <List
-              dataSource={comments[step.id] || []}
-              renderItem={(comment) => (
-                <List.Item>
-                  {comment.userId !== tempUserId ? (
-                    isActive ? (
-                      <Skeleton active paragraph={{ rows: Math.ceil(comment.message.length / 20), width: "80%" }}>
-                        <div
-                          style={{
-                            filter: "blur(4px)",
-                            fontWeight: "normal",
-                            color: "black",
-                          }}
-                        >
-                          {comment.message}
-                        </div>
-                      </Skeleton>
-                    ) : (
-                      <div style={{ fontWeight: "normal", color: "black" }}>
-                        {comment.message}
-                      </div>
-                    )
-                  ) : (
-                    <div
-                      style={{
-                        fontWeight: "bold",
-                        color: "blue",
-                      }}
-                    >
-                      {comment.message}
-                    </div>
-                  )}
-                  {!isActive && (
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                      <Button
-                        icon={<LikeOutlined />}
-                        onClick={() => updateCommentLikes(comment.id, comment.step_id, 1)}
-                        style={{ marginRight: 8 }}
-                        disabled={userVotes[comment.id] === 1}
-                      >
-                        {comment.likes}
-                      </Button>
-                      <Button
-                        icon={<DislikeOutlined />}
-                        onClick={() => updateCommentLikes(comment.id, comment.step_id, -1)}
-                        disabled={userVotes[comment.id] === -1}
-                      >
-                        {comment.dislikes}
-                      </Button>
-                    </div>
-                  )}
-                </List.Item>
-              )}
-            />
-            <Input
-              value={newComments[step.id] || ""}
-              onChange={(e) =>
-                setNewComments((prevComments) => ({
-                  ...prevComments,
-                  [step.id]: e.target.value,
-                }))
-              }
-              placeholder="yorum yap"
-              disabled={!isActive}
-              style={{ display: isActive ? "block" : "none" }}
-            />
-            {isActive && (
-              <Button
-                type="primary"
-                onClick={() => sendComment(step.id)}
-              >
-                Gönder
-              </Button>
-            )}
-          </div>
-        ))
-      ) : (
-        <p>Loading steps...</p>
-      )}
-      {templateOwnerId === actualUserId && isActive && (
-        <Button
-          type="default"
-          onClick={finalizeComments}
-        >
-          Sonuçlandır
-        </Button>
-      )}
+      <StepList
+        steps={steps}
+        comments={comments}
+        isActive={isActive}
+        newComments={newComments}
+        setNewComments={setNewComments}
+        tempUserId={tempUserId}
+        actualUserId={actualUserId}
+        socket={socket}
+        roomId={roomId as string}
+        userVotes={userVotes}
+        setComments={setComments}
+        setUserVotes={setUserVotes}
+      />
+      <FinalizeButton
+        templateOwnerId={templateOwnerId}
+        actualUserId={actualUserId}
+        isActive={isActive}
+        setIsActive={setIsActive}
+        setIsFinalized={setIsFinalized}
+        roomId={roomId as string}
+      />
     </div>
   );
 };
