@@ -1,0 +1,56 @@
+.navbarContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: auto;
+  padding: 10px 0 10px 0;
+  background: white;
+  .logoContainer {
+    flex: 0.4;
+    .logo {
+      font-size: 20px;
+      font-weight: bold;
+      &:last-child {
+        color: #219ebc;
+      }
+    }
+  }
+  .menu {
+    flex: 2;
+    display: flex;
+    justify-content: center;
+    background: transparent;
+    border-bottom: none;
+    align-items: center;
+    .ant-menu-item {
+      font-size: 16px;
+      padding: 0 20px;
+      &:active {
+        border-color: #219ebc;
+      }
+      .ant-menu-title-content {
+        padding: 10px;
+      }
+    }
+  }
+  .rightSection {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+
+    .contactInfo {
+      display: flex;
+      align-items: center;
+
+      svg {
+        margin: 0 5px;
+      }
+    }
+
+    .loginButton {
+      margin-left: 20px;
+    }
+  }
+}

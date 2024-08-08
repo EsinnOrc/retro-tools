@@ -1,18 +1,32 @@
-import { FC } from "react";
+import React, { FC } from "react";
+import { Button as AntButton } from "antd";
 import styles from "./index.module.scss";
-import { Button, Flex } from "antd";
+
 interface ButtonProps {
-  text: string;
-  onClick: () => void;
-  htmlType: "button" | "submit" | "reset";
+  text?: string;
+  onClick?: () => void;
+  htmlType?: "button" | "submit" | "reset";
+  icon?: React.ReactNode;
+  className?: string;
 }
 
-const Buttons: FC<ButtonProps> = ({ text, onClick, htmlType }) => {
+const Buttons: FC<ButtonProps> = ({
+  text,
+  onClick,
+  htmlType = "button",
+  icon,
+  className,
+}) => {
   return (
-    <div className={styles["button"]}>
-      <Button onClick={onClick} htmlType={htmlType}>
+    <div className={styles.button}>
+      <AntButton
+        onClick={onClick}
+        htmlType={htmlType}
+        icon={icon}
+        className={className}
+      >
         {text}
-      </Button>
+      </AntButton>
     </div>
   );
 };
