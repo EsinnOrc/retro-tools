@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { DragDropContext, Droppable, DropResult } from "react-beautiful-dnd";
-import CommentList from "./commentList";
-import CommentInput from "./commentInput";
+import CommentList from "./CommentList";
+import CommentInput from "./CommentInput";
 import {
   Step,
   Comment,
@@ -55,14 +55,12 @@ const StepList: React.FC<StepListProps> = ({
   );
 
   const onDragEnd = async (result: DropResult) => {
-    const { source, destination, combine } = result;
+    const { source, combine } = result;
 
-    if (!destination && !combine) return;
+    if (!combine) return;
 
     const sourceIndex = parseInt(source.droppableId);
-    const destinationIndex = combine
-      ? parseInt(combine.droppableId)
-      : parseInt(destination.droppableId);
+    const destinationIndex = parseInt(combine.droppableId);
 
     const sourceStep = steps[sourceIndex];
     const destinationStep = steps[destinationIndex];
@@ -71,23 +69,145 @@ const StepList: React.FC<StepListProps> = ({
     const [movedComment] = sourceComments.splice(source.index, 1);
     const destinationComments = Array.from(comments[destinationStep.id]);
 
-    if (combine) {
-      const combinedWithComment = destinationComments.find(
-        (comment) => comment.id === combine.draggableId
-      );
-      if (combinedWithComment) {
-        const groupId =
-          Object.keys(commentGroups).find((groupId) =>
-            commentGroups[groupId].includes(combinedWithComment.id)
-          ) || uuidv4();
+    const combinedWithComment = destinationComments.find(
+      (comment) => comment.id === combine.draggableId
+    );
 
+    if (combinedWithComment) {
+      const sourceGroupId = Object.keys(commentGroups).find((groupId) =>
+        commentGroups[groupId].includes(movedComment.id)
+      );
+      const destinationGroupId = Object.keys(commentGroups).find((groupId) =>
+        commentGroups[groupId].includes(combinedWithComment.id)
+      );
+
+      if (sourceGroupId && destinationGroupId) {
+        // Eğer her iki yorum da farklı gruplara aitse, bu grupları birleştirelim
+        const newGroup = Array.from(
+          new Set([
+            ...commentGroups[sourceGroupId],
+            ...commentGroups[destinationGroupId],
+          ])
+        );
+        const newGroupId = uuidv4();
+        setCommentGroups({
+          ...commentGroups,
+          [newGroupId]: newGroup,
+        });
+        delete commentGroups[sourceGroupId];
+        delete commentGroups[destinationGroupId];
+
+        const groupData = {
+          comments: newGroup,
+          room_id: roomId,
+          total_likes: newGroup.reduce((acc, commentId) => {
+            const comment =
+              destinationComments.find((comment) => comment.id === commentId) ||
+              sourceComments.find((comment) => comment.id === commentId);
+            return acc + (comment ? comment.likes : 0);
+          }, 0),
+          total_dislikes: newGroup.reduce((acc, commentId) => {
+            const comment =
+              destinationComments.find((comment) => comment.id === commentId) ||
+              sourceComments.find((comment) => comment.id === commentId);
+            return acc + (comment ? comment.dislikes : 0);
+          }, 0),
+        };
+
+        const groupRef = doc(db, "comment_groups", newGroupId);
+        await setDoc(groupRef, groupData, { merge: true });
+
+        console.log("Group saved to Firebase:", groupData);
+        setGroupLikes({
+          ...groupLikes,
+          [newGroupId]: groupData.total_likes,
+        });
+        setGroupDislikes({
+          ...groupDislikes,
+          [newGroupId]: groupData.total_dislikes,
+        });
+      } else if (sourceGroupId) {
+        // Eğer sadece taşınan yorum bir gruba aitse, bu gruba hedef yorumu ekleyelim
         const newGroup = [
-          ...new Set([
-            ...(commentGroups[groupId] || []),
-            movedComment.id,
-            combinedWithComment.id,
-          ]),
+          ...new Set([...commentGroups[sourceGroupId], combinedWithComment.id]),
         ];
+        setCommentGroups({
+          ...commentGroups,
+          [sourceGroupId]: newGroup,
+        });
+
+        const groupData = {
+          comments: newGroup,
+          room_id: roomId,
+          total_likes: newGroup.reduce((acc, commentId) => {
+            const comment =
+              destinationComments.find((comment) => comment.id === commentId) ||
+              sourceComments.find((comment) => comment.id === commentId);
+            return acc + (comment ? comment.likes : 0);
+          }, 0),
+          total_dislikes: newGroup.reduce((acc, commentId) => {
+            const comment =
+              destinationComments.find((comment) => comment.id === commentId) ||
+              sourceComments.find((comment) => comment.id === commentId);
+            return acc + (comment ? comment.dislikes : 0);
+          }, 0),
+        };
+
+        const groupRef = doc(db, "comment_groups", sourceGroupId);
+        await setDoc(groupRef, groupData, { merge: true });
+
+        console.log("Group updated to Firebase:", groupData);
+        setGroupLikes({
+          ...groupLikes,
+          [sourceGroupId]: groupData.total_likes,
+        });
+        setGroupDislikes({
+          ...groupDislikes,
+          [sourceGroupId]: groupData.total_dislikes,
+        });
+      } else if (destinationGroupId) {
+        // Eğer sadece hedef yorum bir gruba aitse, bu gruba taşınan yorumu ekleyelim
+        const newGroup = [
+          ...new Set([...commentGroups[destinationGroupId], movedComment.id]),
+        ];
+        setCommentGroups({
+          ...commentGroups,
+          [destinationGroupId]: newGroup,
+        });
+
+        const groupData = {
+          comments: newGroup,
+          room_id: roomId,
+          total_likes: newGroup.reduce((acc, commentId) => {
+            const comment =
+              destinationComments.find((comment) => comment.id === commentId) ||
+              sourceComments.find((comment) => comment.id === commentId);
+            return acc + (comment ? comment.likes : 0);
+          }, 0),
+          total_dislikes: newGroup.reduce((acc, commentId) => {
+            const comment =
+              destinationComments.find((comment) => comment.id === commentId) ||
+              sourceComments.find((comment) => comment.id === commentId);
+            return acc + (comment ? comment.dislikes : 0);
+          }, 0),
+        };
+
+        const groupRef = doc(db, "comment_groups", destinationGroupId);
+        await setDoc(groupRef, groupData, { merge: true });
+
+        console.log("Group updated to Firebase:", groupData);
+        setGroupLikes({
+          ...groupLikes,
+          [destinationGroupId]: groupData.total_likes,
+        });
+        setGroupDislikes({
+          ...groupDislikes,
+          [destinationGroupId]: groupData.total_dislikes,
+        });
+      } else {
+        // Eğer her iki yorum da herhangi bir gruba ait değilse, yeni bir grup oluştur
+        const groupId = uuidv4();
+        const newGroup = [movedComment.id, combinedWithComment.id];
         setCommentGroups({
           ...commentGroups,
           [groupId]: newGroup,
@@ -122,20 +242,6 @@ const StepList: React.FC<StepListProps> = ({
           ...groupDislikes,
           [groupId]: groupData.total_dislikes,
         });
-
-        const updatedComments = {
-          ...comments,
-          [sourceStep.id]: sourceComments,
-          [destinationStep.id]: destinationComments,
-        };
-
-        setComments(updatedComments);
-      }
-    } else {
-      if (
-        !destinationComments.some((comment) => comment.id === movedComment.id)
-      ) {
-        destinationComments.splice(destination.index, 0, movedComment);
       }
 
       const updatedComments = {
@@ -145,36 +251,6 @@ const StepList: React.FC<StepListProps> = ({
       };
 
       setComments(updatedComments);
-
-      const groupData = {
-        comments: destinationComments.map((comment) => comment.id),
-        room_id: roomId,
-        total_likes: destinationComments.reduce(
-          (acc, comment) => acc + comment.likes,
-          0
-        ),
-        total_dislikes: destinationComments.reduce(
-          (acc, comment) => acc + comment.dislikes,
-          0
-        ),
-      };
-
-      const groupRef = doc(db, "comment_groups", destinationStep.id);
-      await setDoc(groupRef, groupData, { merge: true });
-
-      console.log("Group saved to Firebase:", groupData);
-      setCommentGroups((prevGroups) => ({
-        ...prevGroups,
-        [destinationStep.id]: destinationComments.map((comment) => comment.id),
-      }));
-      setGroupLikes((prevLikes) => ({
-        ...prevLikes,
-        [destinationStep.id]: groupData.total_likes,
-      }));
-      setGroupDislikes((prevDislikes) => ({
-        ...prevDislikes,
-        [destinationStep.id]: groupData.total_dislikes,
-      }));
     }
   };
 
