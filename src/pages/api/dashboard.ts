@@ -48,15 +48,15 @@ export const fetchUserRooms = async (
     const batch = templateIds.slice(i, i + maxBatchSize);
     const roomsQuery = query(
       collection(db, "rooms"),
-      where("template_id", "in", batch) // == yerine in kullanılıyor
+      where("template_id", "in", batch)
     );
     const roomsSnapshot = await getDocs(roomsQuery);
     roomsSnapshot.docs.forEach((doc) => {
       const roomData = doc.data() as Room;
       const template = templates.find((t) => t.id === roomData.template_id);
       rooms.push({
-        id: doc.id,
         ...roomData,
+        id: doc.id,
         templateName: template ? template.name : "Unknown",
       });
     });
