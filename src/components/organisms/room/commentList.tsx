@@ -1,5 +1,5 @@
 import React from 'react';
-import { List, Button } from "antd";
+import { List, Button, Skeleton } from "antd";
 import { LikeOutlined, DislikeOutlined } from '@ant-design/icons';
 import { Comment } from "./utils";
 import { Draggable } from "react-beautiful-dnd";
@@ -23,15 +23,7 @@ const CommentList: React.FC<CommentListProps> = ({ comments, isActive, userVotes
           <List.Item ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
             {comment.userId !== tempUserId ? (
               isActive ? (
-                <div
-                  style={{
-                    filter: "blur(4px)",
-                    fontWeight: "normal",
-                    color: "black",
-                  }}
-                >
-                  {comment.message}
-                </div>
+                <Skeleton active title={false} paragraph={{ rows: 1 }} />
               ) : (
                 <div style={{ fontWeight: "normal", color: "black" }}>
                   {comment.message}
