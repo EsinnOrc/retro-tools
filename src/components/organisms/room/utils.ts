@@ -126,8 +126,7 @@ export const initializeSnapshot = (
     if (roomData && roomData.is_active === false) {
       setIsFinalized(true);
       setIsActive(false);
-      // Sayfanın tamamen yeniden yüklenmesi yerine, gerekli durumu güncelleyebilirsiniz.
-      // window.location.reload();
+   
     }
   });
 };
@@ -190,8 +189,7 @@ export const finalizeComments = async (
           'Yorumlar başarıyla sonuçlandırıldı.',
           'success'
         ).then(() => {
-          // Sayfanın tamamen yeniden yüklenmesi yerine, gerekli durumu güncelleyebilirsiniz.
-          // window.location.reload();
+ 
         });
       } catch (error) {
         console.error("Error updating document: ", error);
