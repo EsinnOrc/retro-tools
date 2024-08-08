@@ -7,7 +7,7 @@ import Swal from 'sweetalert2';
 import { v4 as uuidv4 } from "uuid";
 import StepList from "./stepList";
 import FinalizeButton from "./finalizeButton";
-import { fetchComments, fetchRoomData, initializeSocket, fetchUserVotes } from "./utils";
+import { fetchComments, fetchRoomData, initializeSnapshot, fetchUserVotes } from "./utils";
 import { Comment, Step } from "./utils";
 
 const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
@@ -62,12 +62,10 @@ const Room: React.FC = () => {
   }, [roomId]);
 
   useEffect(() => {
-    initializeSocket(socket, setComments, setIsFinalized);
-    return () => {
-      socket.off("receiveMessage");
-      socket.off("finalizeComments");
-    };
-  }, []);
+    if (roomId && typeof roomId === "string") {
+      initializeSnapshot(roomId, setIsFinalized, setIsActive);
+    }
+  }, [roomId]);
 
   useEffect(() => {
     if (roomId && typeof roomId === "string" && actualUserId) {

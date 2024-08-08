@@ -1,6 +1,5 @@
 import React from 'react';
 import { Button } from "antd";
-import Swal from 'sweetalert2';
 import { finalizeComments } from "./utils";
 
 interface FinalizeButtonProps {
@@ -12,17 +11,23 @@ interface FinalizeButtonProps {
   roomId: string;
 }
 
-const FinalizeButton: React.FC<FinalizeButtonProps> = ({ templateOwnerId, actualUserId, isActive, setIsActive, setIsFinalized, roomId }) => (
-  <>
-    {templateOwnerId === actualUserId && isActive && (
-      <Button
-        type="default"
-        onClick={() => finalizeComments(roomId, setIsActive, setIsFinalized)}
-      >
-        Sonuçlandır
-      </Button>
-    )}
-  </>
-);
+const FinalizeButton: React.FC<FinalizeButtonProps> = ({ templateOwnerId, actualUserId, isActive, setIsActive, setIsFinalized, roomId }) => {
+  const handleFinalize = () => {
+    finalizeComments(roomId, setIsActive, setIsFinalized);
+  };
+
+  return (
+    <>
+      {templateOwnerId === actualUserId && isActive && (
+        <Button
+          type="default"
+          onClick={handleFinalize}
+        >
+          Sonuçlandır
+        </Button>
+      )}
+    </>
+  );
+};
 
 export default FinalizeButton;

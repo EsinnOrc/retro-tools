@@ -115,25 +115,20 @@ export const fetchUserVotes = async (
   setTotalVotes(Object.keys(userVotesData).length);
 };
 
-export const initializeSocket = (
-  socket: any,
-  setComments: React.Dispatch<React.SetStateAction<{ [key: string]: Comment[] }>>,
-  setIsFinalized: React.Dispatch<React.SetStateAction<boolean>>
+export const initializeSnapshot = (
+  roomId: string,
+  setIsFinalized: React.Dispatch<React.SetStateAction<boolean>>,
+  setIsActive: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
-  socket.on("receiveMessage", (comment: Comment) => {
-    setComments((prevComments) => {
-      const currentComments = prevComments[comment.step_id] || [];
-      const isAlreadyAdded = currentComments.some((c) => c.id === comment.id);
-      if (isAlreadyAdded) return prevComments;
-      return {
-        ...prevComments,
-        [comment.step_id]: [...currentComments, comment],
-      };
-    });
-  });
-
-  socket.on("finalizeComments", () => {
-    setIsFinalized(true);
+  const roomRef = doc(db, "rooms", roomId);
+  onSnapshot(roomRef, (snapshot) => {
+    const roomData = snapshot.data();
+    if (roomData && roomData.is_active === false) {
+      setIsFinalized(true);
+      setIsActive(false);
+      // Sayfanın tamamen yeniden yüklenmesi yerine, gerekli durumu güncelleyebilirsiniz.
+      // window.location.reload();
+    }
   });
 };
 
@@ -194,7 +189,10 @@ export const finalizeComments = async (
           'Sonuçlandırıldı!',
           'Yorumlar başarıyla sonuçlandırıldı.',
           'success'
-        );
+        ).then(() => {
+          // Sayfanın tamamen yeniden yüklenmesi yerine, gerekli durumu güncelleyebilirsiniz.
+          // window.location.reload();
+        });
       } catch (error) {
         console.error("Error updating document: ", error);
       }
