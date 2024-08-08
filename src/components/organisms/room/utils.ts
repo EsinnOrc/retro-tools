@@ -46,12 +46,26 @@ export const fetchComments = (
   roomId: string,
   setComments: React.Dispatch<
     React.SetStateAction<{ [key: string]: Comment[] }>
-  >
+  >,
+  setCommentGroups: React.Dispatch<React.SetStateAction<{ [key: string]: string[] }>>,
+  setGroupLikes: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>,
+  setGroupDislikes: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>
 ) => {
+  if (!roomId) {
+    console.error("Invalid roomId:", roomId);
+    return;
+  }
+
   const commentsQuery = query(
     collection(db, "comments"),
     where("room_id", "==", roomId)
   );
+
+  const groupsQuery = query(
+    collection(db, "comment_groups"),
+    where("room_id", "==", roomId)
+  );
+
   onSnapshot(commentsQuery, (snapshot) => {
     const commentsData: { [key: string]: Comment[] } = {};
     snapshot.forEach((doc) => {
@@ -69,7 +83,36 @@ export const fetchComments = (
         (a, b) => a.created_at.getTime() - b.created_at.getTime()
       );
     });
+    console.log("Comments Data:", commentsData); // Log comments data
     setComments(commentsData);
+  });
+
+  onSnapshot(groupsQuery, (snapshot) => {
+    const groupsData: { [key: string]: string[] } = {};
+    const groupLikesData: { [key: string]: number } = {};
+    const groupDislikesData: { [key: string]: number } = {};
+
+    snapshot.forEach((doc) => {
+      const data = doc.data() as CommentGroup;
+      groupsData[doc.id] = data.comments;
+      groupLikesData[doc.id] = data.total_likes;
+      groupDislikesData[doc.id] = data.total_dislikes;
+    });
+
+    console.log("Groups Data:", groupsData); // Log groups data
+    console.log("Group Likes Data:", groupLikesData); // Log group likes data
+    console.log("Group Dislikes Data:", groupDislikesData); // Log group dislikes data
+
+    try {
+      setCommentGroups(groupsData);
+      setGroupLikes(groupLikesData);
+      setGroupDislikes(groupDislikesData);
+    } catch (error) {
+      console.error("Error setting state:", error);
+      console.error("groupsData:", groupsData);
+      console.error("groupLikesData:", groupLikesData);
+      console.error("groupDislikesData:", groupDislikesData);
+    }
   });
 };
 
@@ -82,13 +125,23 @@ export const fetchRoomData = async (
     roomId: string,
     setComments: React.Dispatch<
       React.SetStateAction<{ [key: string]: Comment[] }>
-    >
+    >,
+    setCommentGroups: React.Dispatch<React.SetStateAction<{ [key: string]: string[] }>>,
+    setGroupLikes: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>,
+    setGroupDislikes: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>
   ) => void,
   setComments: React.Dispatch<
     React.SetStateAction<{ [key: string]: Comment[] }>
-  >
+  >,
+  setCommentGroups: React.Dispatch<React.SetStateAction<{ [key: string]: string[] }>>,
+  setGroupLikes: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>,
+  setGroupDislikes: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>
 ) => {
   try {
+    if (!roomId) {
+      throw new Error("Invalid roomId");
+    }
+
     const roomRef = doc(db, "rooms", roomId);
     const roomDoc = await getDoc(roomRef);
 
@@ -110,7 +163,7 @@ export const fetchRoomData = async (
         }));
         setSteps(stepsList);
 
-        fetchComments(roomId, setComments);
+        fetchComments(roomId, setComments, setCommentGroups, setGroupLikes, setGroupDislikes);
       } else {
         console.error("No such template!");
       }
@@ -245,20 +298,35 @@ export const updateCommentLikes = async (
     const docSnapshot = await getDoc(ref);
     if (docSnapshot.exists()) {
       const data = docSnapshot.data() as Comment | CommentGroup;
-
-      // Eğer kullanıcı daha önce oy verdiyse, oy türünü güncelle
       const userVote = data.userVotes ? data.userVotes[actualUserId] : null;
-      if (userVote === newVote) {
-        Swal.fire({
-          title: "Hata",
-          text: "Bu yoruma zaten oy verdiniz.",
-          icon: "error",
-          confirmButtonText: "Tamam",
-        });
-        return;
+
+      // Eğer kullanıcı daha önce oy verdiyse, oyu sıfırla
+      if (userVote !== null) {
+        const previousVote = userVote;
+        if (previousVote === newVote) {
+          Swal.fire({
+            title: "Hata",
+            text: "Bu yoruma zaten oy verdiniz.",
+            icon: "error",
+            confirmButtonText: "Tamam",
+          });
+          return;
+        } else {
+          const updates: any = {
+            ...(isGroup
+              ? {
+                  total_likes: increment(previousVote === 1 ? -1 : 0),
+                  total_dislikes: increment(previousVote === -1 ? -1 : 0),
+                }
+              : {
+                  likes: increment(previousVote === 1 ? -1 : 0),
+                  dislikes: increment(previousVote === -1 ? -1 : 0),
+                }),
+          };
+          await updateDoc(ref, updates);
+        }
       }
 
-      // Oy türünü güncelle
       const updates: any = {
         ...(isGroup
           ? {
@@ -269,6 +337,7 @@ export const updateCommentLikes = async (
               likes: increment(newVote === 1 ? 1 : 0),
               dislikes: increment(newVote === -1 ? 1 : 0),
             }),
+        [`userVotes.${actualUserId}`]: newVote,
       };
 
       await updateDoc(ref, updates);

@@ -7,7 +7,7 @@ import {
   Comment,
   updateCommentLikes,
   sendComment as sendCommentToDb,
-  fetchCommentGroup,
+  fetchComments,
 } from "./utils";
 import { db } from "@/firebaseConfig";
 import { doc, setDoc, getDoc } from "firebase/firestore";
@@ -76,13 +76,11 @@ const StepList: React.FC<StepListProps> = ({
         (comment) => comment.id === combine.draggableId
       );
       if (combinedWithComment) {
-        // Get the group id of the combinedWithComment
         const groupId =
           Object.keys(commentGroups).find((groupId) =>
             commentGroups[groupId].includes(combinedWithComment.id)
-          ) || combinedWithComment.id;
+          ) || uuidv4();
 
-        // Create a new group with unique comment IDs
         const newGroup = [
           ...new Set([
             ...(commentGroups[groupId] || []),
@@ -125,7 +123,6 @@ const StepList: React.FC<StepListProps> = ({
           [groupId]: groupData.total_dislikes,
         });
 
-        // Yorumları güncelle
         const updatedComments = {
           ...comments,
           [sourceStep.id]: sourceComments,
@@ -168,7 +165,7 @@ const StepList: React.FC<StepListProps> = ({
       console.log("Group saved to Firebase:", groupData);
       setCommentGroups((prevGroups) => ({
         ...prevGroups,
-        [destinationStep.id]: destinationComments,
+        [destinationStep.id]: destinationComments.map((comment) => comment.id),
       }));
       setGroupLikes((prevLikes) => ({
         ...prevLikes,
@@ -218,44 +215,12 @@ const StepList: React.FC<StepListProps> = ({
   };
 
   useEffect(() => {
-    if (steps.length > 0) {
-      steps.forEach(async (step) => {
-        const group = await fetchCommentGroup(step.id);
-        if (group) {
-          setCommentGroups((prevGroups) => ({
-            ...prevGroups,
-            [step.id]: group.comments,
-          }));
-          setGroupLikes((prevLikes) => ({
-            ...prevLikes,
-            [step.id]: group.total_likes,
-          }));
-          setGroupDislikes((prevDislikes) => ({
-            ...prevDislikes,
-            [step.id]: group.total_dislikes,
-          }));
-        }
-      });
+    if (roomId) {
+      fetchComments(roomId, setComments, setCommentGroups, setGroupLikes, setGroupDislikes);
+    } else {
+      console.error("Invalid roomId:", roomId);
     }
-  }, [steps]);
-
-  useEffect(() => {
-    if (commentGroups) {
-      Object.keys(commentGroups).forEach(async (groupId) => {
-        const group = await fetchCommentGroup(groupId);
-        if (group) {
-          setGroupLikes((prevLikes) => ({
-            ...prevLikes,
-            [groupId]: group.total_likes,
-          }));
-          setGroupDislikes((prevDislikes) => ({
-            ...prevDislikes,
-            [groupId]: group.total_dislikes,
-          }));
-        }
-      });
-    }
-  }, [commentGroups]);
+  }, [roomId]);
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
