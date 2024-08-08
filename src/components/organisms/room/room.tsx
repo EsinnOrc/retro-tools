@@ -7,6 +7,7 @@ import Swal from 'sweetalert2';
 import { v4 as uuidv4 } from "uuid";
 import StepList from "./stepList";
 import FinalizeButton from "./finalizeButton";
+import FinalizeGroupingButton from "./FinalizeGroupingButton";
 import { fetchComments, fetchRoomData, initializeSnapshot, fetchUserVotes } from "./utils";
 import { Comment, Step } from "./utils";
 
@@ -109,6 +110,11 @@ const Room: React.FC = () => {
         isActive={isActive}
         setIsActive={setIsActive}
         setIsFinalized={setIsFinalized}
+        roomId={roomId as string}
+      />
+      <FinalizeGroupingButton
+        templateOwnerId={templateOwnerId}
+        actualUserId={actualUserId}
         roomId={roomId as string}
       />
     </div>
