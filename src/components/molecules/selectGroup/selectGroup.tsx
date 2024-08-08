@@ -1,6 +1,7 @@
 import React, { FC } from "react";
 import Select from "@/components/atoms/selects/select";
 import { Labels } from "@/components/atoms/labels/label";
+import { Row, Col } from "antd";
 import styles from "./index.module.scss";
 
 interface SelectGroupProps {
@@ -23,15 +24,21 @@ const SelectGroup: FC<SelectGroupProps> = ({
   disabled = false,
 }) => {
   return (
-    <div className={styles["selectGroup"]}>
-      <Labels text={label} htmlFor={name} />
-      <Select
-        value={value}
-        placeholder={placeholder}
-        options={options}
-        onChange={onChange}
-        disabled={disabled}
-      />
+    <div className={styles.selectGroup}>
+      <Row gutter={[8, 8]}>
+        <Col span={24}>
+          <Labels text={label} htmlFor={name} />
+        </Col>
+        <Col span={24}>
+          <Select
+            value={value}
+            placeholder={placeholder}
+            options={options}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        </Col>
+      </Row>
     </div>
   );
 };

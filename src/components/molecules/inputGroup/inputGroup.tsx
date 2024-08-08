@@ -2,6 +2,7 @@ import React, { FC } from "react";
 import Inputs from "@/components/atoms/inputs/inputs";
 import { Labels } from "@/components/atoms/labels/label";
 import { Flex } from "antd";
+import Styles from "./index.module.scss";
 
 interface InputGroupProps {
   label: string;
@@ -19,7 +20,7 @@ const InputGroup: FC<InputGroupProps> = ({
   onChange,
 }) => {
   return (
-    <Flex vertical>
+    <Flex vertical gap={10} className={Styles.content}>
       <Labels text={label} htmlFor={name} />
       <Inputs name={name} onChange={onChange} value={value} type={type} />
     </Flex>

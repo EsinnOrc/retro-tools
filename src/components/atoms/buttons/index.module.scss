@@ -1,7 +1,12 @@
 .button {
   :global {
     .ant-btn {
-      background-color: red;
+      background-color: #219ebc;
+      color: white;
+      border-radius: 0px 15px 15px 15px;
+      &:hover {
+        border: 1px solid #15729e;
+      }
     }
   }
 }

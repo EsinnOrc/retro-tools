@@ -1,0 +1,14 @@
+.layoutStyle {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+
+  .content {
+    margin: 24px 16px;
+    padding: 24px;
+    min-height: calc(100vh - 112px);
+    background: #fff;
+    border-radius: 8px;
+    overflow: auto;
+  }
+}

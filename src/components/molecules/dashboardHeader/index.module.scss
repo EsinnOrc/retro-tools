@@ -1,0 +1,25 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: #fff;
+  height: 64px;
+  border-bottom: 1px solid #e8e8e8;
+  width: 98%;
+  margin: auto;
+  border-radius: 10px;
+  p {
+    margin: 0;
+    font-weight: bold;
+  }
+  .button {
+    color: black;
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+  .logoutButton {
+    background-color: #023047;
+  }
+}
