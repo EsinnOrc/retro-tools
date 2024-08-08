@@ -1,9 +1,11 @@
 import React from "react";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import CommentList from "./commentList";
-import { Step, Comment, updateCommentLikes, updateCommentGroup } from "./utils";
+import { DragDropContext, Droppable } from "react-beautiful-dnd";
+import CommentList from "./CommentList";
+import CommentInput from "./CommentInput";
+import { Step, Comment, updateCommentLikes, updateCommentGroup, sendComment as sendCommentToDb } from "./utils";
 import { db } from "@/firebaseConfig";
-import { collection, doc, setDoc, updateDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { v4 as uuidv4 } from "uuid";
 
 interface StepListProps {
   steps: Step[];
@@ -46,7 +48,6 @@ const StepList: React.FC<StepListProps> = ({
     const [movedComment] = sourceComments.splice(source.index, 1);
     const destinationComments = Array.from(comments[destinationStep.id]);
 
-    // Kontrol: Eğer yorum zaten destinationComments içinde varsa ekleme
     if (!destinationComments.some(comment => comment.id === movedComment.id)) {
       destinationComments.splice(destination.index, 0, movedComment);
     }
@@ -59,7 +60,6 @@ const StepList: React.FC<StepListProps> = ({
 
     setComments(updatedComments);
 
-    // Firebase'e comment_groups kaydetme
     const groupData = {
       comments: destinationComments.map(comment => comment.id),
       room_id: doc(db, "rooms", roomId),
@@ -89,6 +89,35 @@ const StepList: React.FC<StepListProps> = ({
     console.log(`Comment ${commentId} removed from group ${groupId}`);
   };
 
+  const sendComment = (stepId: string) => {
+    const commentText = newComments[stepId];
+    if (!commentText) return;
+
+    const newComment: Comment = {
+      id: uuidv4(),
+      message: commentText,
+      userId: actualUserId,
+      step_id: stepId,
+      likes: 0,
+      dislikes: 0,
+      created_at: new Date(),
+      room_id: roomId as string,
+      userVotes: {}
+    };
+
+    setComments((prevComments) => ({
+      ...prevComments,
+      [stepId]: prevComments[stepId] ? [...prevComments[stepId], newComment] : [newComment],
+    }));
+
+    setNewComments((prevComments) => ({
+      ...prevComments,
+      [stepId]: '',
+    }));
+
+    sendCommentToDb(stepId, { [stepId]: commentText }, tempUserId, roomId, socket);
+  };
+
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       {steps.map((step, index) => (
@@ -106,6 +135,13 @@ const StepList: React.FC<StepListProps> = ({
                 tempUserId={tempUserId}
                 isGroup={true}
                 groupId={step.id}
+              />
+              <CommentInput
+                stepId={step.id}
+                newComment={newComments[step.id] || ''}
+                setNewComments={setNewComments}
+                isActive={isActive}
+                sendComment={sendComment}
               />
               {provided.placeholder}
             </div>
