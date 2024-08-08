@@ -4,12 +4,13 @@
   justify-content: space-between;
   width: 100%;
   margin: auto;
-  padding: 10px 0 10px 0;
+  padding: 1.25rem 0 1.25rem 0;
+  border-bottom: 1px solid rgb(239, 238, 238);
   background: white;
   .logoContainer {
     flex: 0.4;
     .logo {
-      font-size: 20px;
+      font-size: 1.25rem;
       font-weight: bold;
       &:last-child {
         color: #219ebc;
@@ -24,13 +25,13 @@
     border-bottom: none;
     align-items: center;
     .ant-menu-item {
-      font-size: 16px;
-      padding: 0 20px;
+      font-size: 1rem;
+      padding: 0 1.25rem;
       &:active {
         border-color: #219ebc;
       }
       .ant-menu-title-content {
-        padding: 10px;
+        padding: 0.625rem;
       }
     }
   }
@@ -45,12 +46,12 @@
       align-items: center;
 
       svg {
-        margin: 0 5px;
+        margin: 0 0.313rem;
       }
     }
 
     .loginButton {
-      margin-left: 20px;
+      margin-left: 1.25rem;
     }
   }
 }

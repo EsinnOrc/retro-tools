@@ -1,6 +1,6 @@
 import React, { FC, useState } from "react";
 import { useRouter } from "next/router";
-import { message, Steps, Row, Col, Flex } from "antd";
+import { message, Steps, Row, Col, Form } from "antd";
 import { getAuth } from "firebase/auth";
 import { collection, addDoc } from "firebase/firestore";
 import { v4 as uuidv4 } from "uuid";
@@ -11,6 +11,7 @@ import SelectGroup from "@/components/molecules/selectGroup/selectGroup";
 import InputGroup from "@/components/molecules/inputGroup/inputGroup";
 import styles from "./index.module.scss";
 import { Labels } from "@/components/atoms/labels/label";
+import * as yup from "yup";
 
 const { Step } = Steps;
 
@@ -21,18 +22,30 @@ const CreateTemplateForm: FC = () => {
     []
   );
   const [current, setCurrent] = useState(0);
+  const [form] = Form.useForm();
   const router = useRouter();
   const auth = getAuth();
 
+  const schema = yup.object().shape({
+    templateName: yup.string().required("Template Name is required"),
+    steps: yup.string().required("Number of Steps is required"),
+    stepNames: yup.array().of(
+      yup.object().shape({
+        name: yup.string().required("Step Name is required"),
+      })
+    ),
+  });
+
   const handleCreateTemplate = async () => {
-    const user = auth.currentUser;
-
-    if (!user) {
-      console.error("No user is signed in.");
-      return;
-    }
-
     try {
+      await schema.validate({ templateName, steps: step, stepNames });
+      const user = auth.currentUser;
+
+      if (!user) {
+        console.error("No user is signed in.");
+        return;
+      }
+
       await addDoc(collection(db, "templates"), {
         name: templateName,
         step: parseInt(step, 10),
@@ -43,8 +56,12 @@ const CreateTemplateForm: FC = () => {
       message.success("Template and steps created successfully");
       router.push("/dashboard");
     } catch (error) {
-      console.error("Error creating template and steps:", error);
-      message.error("Error creating template and steps");
+      if (error instanceof yup.ValidationError) {
+        message.error(error.message);
+      } else {
+        console.error("Error creating template and steps:", error);
+        message.error("Error creating template and steps");
+      }
     }
   };
 
@@ -65,7 +82,14 @@ const CreateTemplateForm: FC = () => {
   };
 
   const next = () => {
-    setCurrent(current + 1);
+    form
+      .validateFields()
+      .then(() => {
+        setCurrent(current + 1);
+      })
+      .catch((error) => {
+        console.error("Validation failed:", error);
+      });
   };
 
   const prev = () => {
@@ -76,29 +100,39 @@ const CreateTemplateForm: FC = () => {
     {
       title: "Template Name",
       content: (
-        <InputGroup
-          label="Template Name"
+        <Form.Item
           name="templateName"
-          onChange={(e) => setTemplateName(e.target.value)}
-          value={templateName}
-          type="text"
-        />
+          rules={[{ required: true, message: "Template Name is required" }]}
+        >
+          <InputGroup
+            label="Template Name"
+            name="templateName"
+            onChange={(e) => setTemplateName(e.target.value)}
+            value={templateName}
+            type="text"
+          />
+        </Form.Item>
       ),
     },
     {
       title: "Number of Steps",
       content: (
-        <SelectGroup
-          label="Number of Steps"
+        <Form.Item
           name="steps"
-          onChange={handleStepChange}
-          value={step}
-          options={[1, 2, 3, 4, 5].map((num) => ({
-            value: num.toString(),
-            label: num.toString(),
-          }))}
-          placeholder="Select number of steps"
-        />
+          rules={[{ required: true, message: "Number of Steps is required" }]}
+        >
+          <SelectGroup
+            label="Number of Steps"
+            name="steps"
+            onChange={handleStepChange}
+            value={step}
+            options={[1, 2, 3, 4, 5].map((num) => ({
+              value: num.toString(),
+              label: num.toString(),
+            }))}
+            placeholder="Select number of steps"
+          />
+        </Form.Item>
       ),
     },
     {
@@ -106,19 +140,25 @@ const CreateTemplateForm: FC = () => {
       content: (
         <>
           {stepNames.map((step, index) => (
-            <div>
-              <Labels
-                htmlFor={`stepName${index}`}
-                text={`Step ${index + 1}:`}
-              />
-              <Inputs
-                key={index}
-                name={`stepName${index}`}
-                onChange={(e) => handleStepNameChange(index, e.target.value)}
-                value={step.name}
-                type="text"
-              />
-            </div>
+            <Form.Item
+              key={index}
+              name={`stepName${index}`}
+              rules={[{ required: true, message: "Step Name is required" }]}
+            >
+              <div>
+                <Labels
+                  htmlFor={`stepName${index}`}
+                  text={`Step ${index + 1}:`}
+                />
+                <Inputs
+                  key={index}
+                  name={`stepName${index}`}
+                  onChange={(e) => handleStepNameChange(index, e.target.value)}
+                  value={step.name}
+                  type="text"
+                />
+              </div>
+            </Form.Item>
           ))}
         </>
       ),
@@ -133,8 +173,10 @@ const CreateTemplateForm: FC = () => {
           <Step key={item.title} title={item.title} />
         ))}
       </Steps>
-      <div className={styles.stepContent}>{steps[current].content}</div>
-      <Flex align="center" justify="flex-end" gap={10}>
+      <Form form={form} layout="vertical">
+        <div className={styles.stepContent}>{steps[current].content}</div>
+      </Form>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
         {current > 0 && (
           <Buttons text="Previous" onClick={prev} htmlType="button" />
         )}
@@ -148,7 +190,7 @@ const CreateTemplateForm: FC = () => {
             htmlType="button"
           />
         )}
-      </Flex>
+      </div>
     </div>
   );
 };

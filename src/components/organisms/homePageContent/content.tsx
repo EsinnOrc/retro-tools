@@ -73,7 +73,7 @@ const StatsSection = () => {
           <Col xs={24} sm={24} md={12} lg={8}>
             <div className={styles["image-container"]}>
               <img
-                src="/two.jpg"
+                src="/two2.svg"
                 alt="Image Description"
                 className={styles["stats-image"]}
               />
