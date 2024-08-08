@@ -1,7 +1,7 @@
 import React from "react";
-import { DragDropContext, Droppable } from "react-beautiful-dnd";
-import CommentList from "./CommentList";
-import CommentInput from "./CommentInput";
+import { DragDropContext, Droppable, DropResult } from "react-beautiful-dnd";
+import CommentList from "./commentList";
+import CommentInput from "./commentInput";
 import { Step, Comment, updateCommentLikes, updateCommentGroup, sendComment as sendCommentToDb } from "./utils";
 import { db } from "@/firebaseConfig";
 import { doc, setDoc, getDoc } from "firebase/firestore";
@@ -36,13 +36,16 @@ const StepList: React.FC<StepListProps> = ({
   setComments,
   setUserVotes,
 }) => {
-  const onDragEnd = async (result) => {
+  const onDragEnd = async (result: DropResult) => {
     const { source, destination } = result;
 
     if (!destination) return;
 
-    const sourceStep = steps[source.droppableId];
-    const destinationStep = steps[destination.droppableId];
+    const sourceIndex = parseInt(source.droppableId);
+    const destinationIndex = parseInt(destination.droppableId);
+
+    const sourceStep = steps[sourceIndex];
+    const destinationStep = steps[destinationIndex];
 
     const sourceComments = Array.from(comments[sourceStep.id]);
     const [movedComment] = sourceComments.splice(source.index, 1);
@@ -76,17 +79,21 @@ const StepList: React.FC<StepListProps> = ({
   const removeFromGroup = async (commentId: string, groupId: string) => {
     const groupRef = doc(db, "comment_groups", groupId);
     await updateCommentGroup(groupId, commentId, "remove");
-    
+
     const groupDoc = await getDoc(groupRef);
-    const groupData = groupDoc.data();
-    const updatedGroupComments = groupData.comments.filter((id: string) => id !== commentId);
+    if (groupDoc.exists()) {
+      const groupData = groupDoc.data();
+      const updatedGroupComments = groupData?.comments?.filter((id: string) => id !== commentId);
 
-    setComments(prevComments => {
-      const groupComments = prevComments[groupId].filter(comment => comment.id !== commentId);
-      return { ...prevComments, [groupId]: groupComments };
-    });
+      setComments(prevComments => {
+        const groupComments = prevComments[groupId].filter(comment => comment.id !== commentId);
+        return { ...prevComments, [groupId]: groupComments };
+      });
 
-    console.log(`Comment ${commentId} removed from group ${groupId}`);
+      console.log(`Comment ${commentId} removed from group ${groupId}`);
+    } else {
+      console.error(`Group ${groupId} does not exist.`);
+    }
   };
 
   const sendComment = (stepId: string) => {
