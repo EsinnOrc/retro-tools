@@ -1,8 +1,14 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { DragDropContext, Droppable, DropResult } from "react-beautiful-dnd";
 import CommentList from "./commentList";
 import CommentInput from "./commentInput";
-import { Step, Comment, updateCommentLikes, updateCommentGroup, sendComment as sendCommentToDb } from "./utils";
+import {
+  Step,
+  Comment,
+  updateCommentLikes,
+  sendComment as sendCommentToDb,
+  fetchComments,
+} from "./utils";
 import { db } from "@/firebaseConfig";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { v4 as uuidv4 } from "uuid";
@@ -12,13 +18,17 @@ interface StepListProps {
   comments: { [key: string]: Comment[] };
   isActive: boolean;
   newComments: { [key: string]: string };
-  setNewComments: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
+  setNewComments: React.Dispatch<
+    React.SetStateAction<{ [key: string]: string }>
+  >;
   tempUserId: string;
   actualUserId: string;
   socket: any;
   roomId: string;
   userVotes: { [key: string]: number };
-  setComments: React.Dispatch<React.SetStateAction<{ [key: string]: Comment[] }>>;
+  setComments: React.Dispatch<
+    React.SetStateAction<{ [key: string]: Comment[] }>
+  >;
   setUserVotes: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>;
 }
 
@@ -36,13 +46,21 @@ const StepList: React.FC<StepListProps> = ({
   setComments,
   setUserVotes,
 }) => {
-  const onDragEnd = async (result: DropResult) => {
-    const { source, destination } = result;
+  const [commentGroups, setCommentGroups] = useState<{
+    [key: string]: string[];
+  }>({});
+  const [groupLikes, setGroupLikes] = useState<{ [key: string]: number }>({});
+  const [groupDislikes, setGroupDislikes] = useState<{ [key: string]: number }>(
+    {}
+  );
 
-    if (!destination) return;
+  const onDragEnd = async (result: DropResult) => {
+    const { source, combine } = result;
+
+    if (!combine) return;
 
     const sourceIndex = parseInt(source.droppableId);
-    const destinationIndex = parseInt(destination.droppableId);
+    const destinationIndex = parseInt(combine.droppableId);
 
     const sourceStep = steps[sourceIndex];
     const destinationStep = steps[destinationIndex];
@@ -51,48 +69,180 @@ const StepList: React.FC<StepListProps> = ({
     const [movedComment] = sourceComments.splice(source.index, 1);
     const destinationComments = Array.from(comments[destinationStep.id]);
 
-    if (!destinationComments.some(comment => comment.id === movedComment.id)) {
-      destinationComments.splice(destination.index, 0, movedComment);
-    }
+    const combinedWithComment = destinationComments.find(
+      (comment) => comment.id === combine.draggableId
+    );
 
-    const updatedComments = {
-      ...comments,
-      [sourceStep.id]: sourceComments,
-      [destinationStep.id]: destinationComments,
-    };
+    if (combinedWithComment) {
+      const sourceGroupId = Object.keys(commentGroups).find((groupId) =>
+        commentGroups[groupId].includes(movedComment.id)
+      );
+      const destinationGroupId = Object.keys(commentGroups).find((groupId) =>
+        commentGroups[groupId].includes(combinedWithComment.id)
+      );
 
-    setComments(updatedComments);
+      if (sourceGroupId && destinationGroupId) {
+        const newGroup = Array.from(
+          new Set([
+            ...commentGroups[sourceGroupId],
+            ...commentGroups[destinationGroupId],
+          ])
+        );
+        const newGroupId = uuidv4();
+        setCommentGroups({
+          ...commentGroups,
+          [newGroupId]: newGroup,
+        });
+        delete commentGroups[sourceGroupId];
+        delete commentGroups[destinationGroupId];
 
-    const groupData = {
-      comments: destinationComments.map(comment => comment.id),
-      room_id: doc(db, "rooms", roomId),
-      total_likes: destinationComments.reduce((acc, comment) => acc + comment.likes, 0),
-      total_dislikes: destinationComments.reduce((acc, comment) => acc + comment.dislikes, 0),
-    };
+        const groupData = {
+          comments: newGroup,
+          room_id: roomId,
+          total_likes: newGroup.reduce((acc, commentId) => {
+            const comment =
+              destinationComments.find((comment) => comment.id === commentId) ||
+              sourceComments.find((comment) => comment.id === commentId);
+            return acc + (comment ? comment.likes : 0);
+          }, 0),
+          total_dislikes: newGroup.reduce((acc, commentId) => {
+            const comment =
+              destinationComments.find((comment) => comment.id === commentId) ||
+              sourceComments.find((comment) => comment.id === commentId);
+            return acc + (comment ? comment.dislikes : 0);
+          }, 0),
+        };
 
-    const groupRef = doc(db, "comment_groups", destinationStep.id);
-    await setDoc(groupRef, groupData, { merge: true });
+        const groupRef = doc(db, "comment_groups", newGroupId);
+        await setDoc(groupRef, groupData, { merge: true });
 
-    console.log("Group saved to Firebase:", groupData);
-  };
+        setGroupLikes({
+          ...groupLikes,
+          [newGroupId]: groupData.total_likes,
+        });
+        setGroupDislikes({
+          ...groupDislikes,
+          [newGroupId]: groupData.total_dislikes,
+        });
+      } else if (sourceGroupId) {
+        const newGroup = Array.from(
+          new Set([...commentGroups[sourceGroupId], combinedWithComment.id])
+        );
+        setCommentGroups({
+          ...commentGroups,
+          [sourceGroupId]: newGroup,
+        });
 
-  const removeFromGroup = async (commentId: string, groupId: string) => {
-    const groupRef = doc(db, "comment_groups", groupId);
-    await updateCommentGroup(groupId, commentId, "remove");
+        const groupData = {
+          comments: newGroup,
+          room_id: roomId,
+          total_likes: newGroup.reduce((acc, commentId) => {
+            const comment =
+              destinationComments.find((comment) => comment.id === commentId) ||
+              sourceComments.find((comment) => comment.id === commentId);
+            return acc + (comment ? comment.likes : 0);
+          }, 0),
+          total_dislikes: newGroup.reduce((acc, commentId) => {
+            const comment =
+              destinationComments.find((comment) => comment.id === commentId) ||
+              sourceComments.find((comment) => comment.id === commentId);
+            return acc + (comment ? comment.dislikes : 0);
+          }, 0),
+        };
 
-    const groupDoc = await getDoc(groupRef);
-    if (groupDoc.exists()) {
-      const groupData = groupDoc.data();
-      const updatedGroupComments = groupData?.comments?.filter((id: string) => id !== commentId);
+        const groupRef = doc(db, "comment_groups", sourceGroupId);
+        await setDoc(groupRef, groupData, { merge: true });
 
-      setComments(prevComments => {
-        const groupComments = prevComments[groupId].filter(comment => comment.id !== commentId);
-        return { ...prevComments, [groupId]: groupComments };
-      });
+        setGroupLikes({
+          ...groupLikes,
+          [sourceGroupId]: groupData.total_likes,
+        });
+        setGroupDislikes({
+          ...groupDislikes,
+          [sourceGroupId]: groupData.total_dislikes,
+        });
+      } else if (destinationGroupId) {
+        const newGroup = Array.from(
+          new Set([...commentGroups[destinationGroupId], movedComment.id])
+        );
+        setCommentGroups({
+          ...commentGroups,
+          [destinationGroupId]: newGroup,
+        });
 
-      console.log(`Comment ${commentId} removed from group ${groupId}`);
-    } else {
-      console.error(`Group ${groupId} does not exist.`);
+        const groupData = {
+          comments: newGroup,
+          room_id: roomId,
+          total_likes: newGroup.reduce((acc, commentId) => {
+            const comment =
+              destinationComments.find((comment) => comment.id === commentId) ||
+              sourceComments.find((comment) => comment.id === commentId);
+            return acc + (comment ? comment.likes : 0);
+          }, 0),
+          total_dislikes: newGroup.reduce((acc, commentId) => {
+            const comment =
+              destinationComments.find((comment) => comment.id === commentId) ||
+              sourceComments.find((comment) => comment.id === commentId);
+            return acc + (comment ? comment.dislikes : 0);
+          }, 0),
+        };
+
+        const groupRef = doc(db, "comment_groups", destinationGroupId);
+        await setDoc(groupRef, groupData, { merge: true });
+
+        setGroupLikes({
+          ...groupLikes,
+          [destinationGroupId]: groupData.total_likes,
+        });
+        setGroupDislikes({
+          ...groupDislikes,
+          [destinationGroupId]: groupData.total_dislikes,
+        });
+      } else {
+        const groupId = uuidv4();
+        const newGroup = [movedComment.id, combinedWithComment.id];
+        setCommentGroups({
+          ...commentGroups,
+          [groupId]: newGroup,
+        });
+
+        const groupData = {
+          comments: newGroup,
+          room_id: roomId,
+          total_likes: newGroup.reduce((acc, commentId) => {
+            const comment =
+              destinationComments.find((comment) => comment.id === commentId) ||
+              sourceComments.find((comment) => comment.id === commentId);
+            return acc + (comment ? comment.likes : 0);
+          }, 0),
+          total_dislikes: newGroup.reduce((acc, commentId) => {
+            const comment =
+              destinationComments.find((comment) => comment.id === commentId) ||
+              sourceComments.find((comment) => comment.id === commentId);
+            return acc + (comment ? comment.dislikes : 0);
+          }, 0),
+        };
+
+        const groupRef = doc(db, "comment_groups", groupId);
+        await setDoc(groupRef, groupData, { merge: true });
+
+        setGroupLikes({
+          ...groupLikes,
+          [groupId]: groupData.total_likes,
+        });
+        setGroupDislikes({
+          ...groupDislikes,
+          [groupId]: groupData.total_dislikes,
+        });
+      }
+
+      const updatedComments = {
+        ...comments,
+        [sourceStep.id]: sourceComments,
+        [destinationStep.id]: destinationComments,
+      };
+
+      setComments(updatedComments);
     }
   };
 
@@ -109,26 +259,39 @@ const StepList: React.FC<StepListProps> = ({
       dislikes: 0,
       created_at: new Date(),
       room_id: roomId as string,
-      userVotes: {}
     };
 
     setComments((prevComments) => ({
       ...prevComments,
-      [stepId]: prevComments[stepId] ? [...prevComments[stepId], newComment] : [newComment],
+      [stepId]: prevComments[stepId]
+        ? [...prevComments[stepId], newComment]
+        : [newComment],
     }));
 
     setNewComments((prevComments) => ({
       ...prevComments,
-      [stepId]: '',
+      [stepId]: "",
     }));
 
-    sendCommentToDb(stepId, { [stepId]: commentText }, tempUserId, roomId, socket);
+    sendCommentToDb(
+      stepId,
+      { [stepId]: commentText },
+      tempUserId,
+      roomId,
+      socket
+    );
   };
+
+  useEffect(() => {
+    if (roomId) {
+      fetchComments(roomId, setComments, setCommentGroups, setGroupLikes, setGroupDislikes);
+    }
+  }, [roomId]);
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       {steps.map((step, index) => (
-        <Droppable droppableId={`${index}`} key={step.id}>
+        <Droppable droppableId={String(index)} key={step.id} isCombineEnabled>
           {(provided) => (
             <div ref={provided.innerRef} {...provided.droppableProps}>
               <h2>{step.name}</h2>
@@ -136,16 +299,25 @@ const StepList: React.FC<StepListProps> = ({
                 comments={comments[step.id]}
                 isActive={isActive}
                 userVotes={userVotes}
-                updateCommentLikes={(commentId, stepId, newVote) =>
-                  updateCommentLikes(commentId, stepId, newVote, actualUserId, setComments, setUserVotes)
+                updateCommentLikes={(commentId, stepId, newVote, isGroup) =>
+                  updateCommentLikes(
+                    commentId,
+                    stepId,
+                    newVote,
+                    actualUserId,
+                    setComments,
+                    setUserVotes,
+                    isGroup
+                  )
                 }
                 tempUserId={tempUserId}
-                isGroup={true}
-                groupId={step.id}
+                commentGroups={commentGroups}
+                groupLikes={groupLikes}
+                groupDislikes={groupDislikes}
               />
               <CommentInput
                 stepId={step.id}
-                newComment={newComments[step.id] || ''}
+                newComment={newComments[step.id] || ""}
                 setNewComments={setNewComments}
                 isActive={isActive}
                 sendComment={sendComment}

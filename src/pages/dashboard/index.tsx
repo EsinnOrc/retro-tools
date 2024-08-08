@@ -8,6 +8,7 @@ import { Template, Step } from "@/types/dashboard";
 import CardGroup from "@/components/molecules/cardGroup/cardGroup";
 import Pagination from "@/components/atoms/pagination/pagination";
 import Layout from "@/components/organisms/layout/layout";
+import styles from "@/styles/dashboard.module.scss";
 
 const DashboardPage: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -92,13 +93,17 @@ const DashboardPage: React.FC = () => {
 
   return (
     <Layout user={user} collapsed={collapsed} toggleSidebar={toggleSidebar}>
-      <CardGroup cards={cardData} />
-      <Pagination
-        total={templates.length}
-        pageSize={pageSize}
-        currentPage={currentPage}
-        onPageChange={handlePageChange}
-      />
+      <div className={styles.dashboardContainer}>
+        <h2>Create a New Template</h2>
+
+        <CardGroup cards={cardData} />
+        <Pagination
+          total={templates.length}
+          pageSize={pageSize}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+        />
+      </div>
     </Layout>
   );
 };

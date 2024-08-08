@@ -27,6 +27,10 @@ const Room: React.FC = () => {
   const [userVotes, setUserVotes] = useState<{ [key: string]: number }>({});
   const [actualUserId, setActualUserId] = useState<string>("");
   const [tempUserId, setTempUserId] = useState<string>("");
+  const [commentGroups, setCommentGroups] = useState<{ [key: string]: string[] }>({});
+  const [groupLikes, setGroupLikes] = useState<{ [key: string]: number }>({});
+  const [groupDislikes, setGroupDislikes] = useState<{ [key: string]: number }>({});
+  
   const router = useRouter();
   const { roomId } = router.query;
 
@@ -57,7 +61,17 @@ const Room: React.FC = () => {
 
   useEffect(() => {
     if (roomId && typeof roomId === "string") {
-      fetchRoomData(roomId, setTemplateOwnerId, setSteps, setIsActive, fetchComments, setComments);
+      fetchRoomData(
+        roomId, 
+        setTemplateOwnerId, 
+        setSteps, 
+        setIsActive, 
+        fetchComments, 
+        setComments, 
+        setCommentGroups, 
+        setGroupLikes, 
+        setGroupDislikes
+      );
     }
   }, [roomId]);
 

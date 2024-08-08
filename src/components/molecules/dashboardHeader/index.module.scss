@@ -2,11 +2,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 20px;
   background: #fff;
   height: 64px;
   border-bottom: 1px solid #e8e8e8;
-  width: 98%;
+  width: 100%;
   margin: auto;
   border-radius: 10px;
   p {
@@ -17,9 +17,5 @@
     color: black;
     border: none;
     background: none;
-    cursor: pointer;
-  }
-  .logoutButton {
-    background-color: #023047;
   }
 }

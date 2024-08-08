@@ -3,8 +3,18 @@ export interface Step {
   name: string;
 }
 
-export type Template = {
+export interface Template {
   id: string;
   name: string;
   step_names?: Step[];
-};
+}
+
+export interface Room {
+  id: string;
+  template_id: string;
+  is_active: boolean;
+  created_at: {
+    seconds: number;
+    nanoseconds: number;
+  };
+}

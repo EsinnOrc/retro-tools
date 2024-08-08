@@ -49,11 +49,11 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ collapsed }) => {
       <Menu.Item key="/create-template" icon={<PlusOutlined />}>
         Create Template
       </Menu.Item>
-      <Menu.Item key="/active-rooms" icon={<VideoCameraOutlined />}>
-        Active Rooms
+      <Menu.Item key="room-lists" icon={<VideoCameraOutlined />}>
+        Room Lists
       </Menu.Item>
-      <Menu.Item key="/passive-rooms" icon={<VideoCameraOutlined />}>
-        Passive Rooms
+      <Menu.Item key="/statistics" icon={<VideoCameraOutlined />}>
+        Statistics
       </Menu.Item>
       <Menu.Item key="/logout" icon={<LogoutOutlined />}>
         Logout

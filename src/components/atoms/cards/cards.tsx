@@ -21,14 +21,15 @@ const Card: React.FC<CardProps> = ({
   return (
     <AntCard className={styles.card}>
       <AntCard.Meta title={title} description={description} />
-
-      <div className={styles.steps}>
-        <h4>Steps:</h4>
-        <ul>
-          {steps.map((step, index) => (
-            <li key={index}>{step}</li>
-          ))}
-        </ul>
+      <div className={styles.content}>
+        <div className={styles.steps}>
+          <h4>Steps:</h4>
+          <ul>
+            {steps.map((step, index) => (
+              <li key={index}>{step}</li>
+            ))}
+          </ul>
+        </div>
       </div>
       <div className={styles.cardActions}>
         <Buttons
