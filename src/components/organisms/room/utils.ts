@@ -12,7 +12,7 @@ export interface Comment {
   dislikes: number;
   created_at: Date;
   room_id: string;
-  userVotes: { [key: string]: number };
+  userVotes?: { [key: string]: number };
 }
 
 export interface Step {
@@ -26,6 +26,7 @@ export interface CommentGroup {
   room_id: string;
   total_likes: number;
   total_dislikes: number;
+  userVotes?: { [key: string]: number };
 }
 
 export const fetchComments = (roomId: string, setComments: React.Dispatch<React.SetStateAction<{ [key: string]: Comment[] }>>) => {
@@ -126,7 +127,6 @@ export const initializeSnapshot = (
     if (roomData && roomData.is_active === false) {
       setIsFinalized(true);
       setIsActive(false);
-   
     }
   });
 };
@@ -139,7 +139,7 @@ export const sendComment = async (
   socket: any
 ) => {
   const commentId = uuidv4();
-  const comment = {
+  const comment: Comment = {
     id: commentId,
     message: newComments[stepId],
     userId: tempUserId,
@@ -147,7 +147,7 @@ export const sendComment = async (
     likes: 0,
     dislikes: 0,
     created_at: new Date(),
-    room_id: roomId,
+    room_id: roomId as string,
     userVotes: {}
   };
 
@@ -189,7 +189,6 @@ export const finalizeComments = async (
           'Yorumlar başarıyla sonuçlandırıldı.',
           'success'
         ).then(() => {
- 
         });
       } catch (error) {
         console.error("Error updating document: ", error);
@@ -204,16 +203,19 @@ export const updateCommentLikes = async (
   newVote: number,
   actualUserId: string,
   setComments: React.Dispatch<React.SetStateAction<{ [key: string]: Comment[] }>>,
-  setUserVotes: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>
+  setUserVotes: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>,
+  isGroup: boolean
 ) => {
-  const commentRef = doc(db, "comments", commentId);
-  try {
-    const commentDoc = await getDoc(commentRef);
-    if (commentDoc.exists()) {
-      const commentData = commentDoc.data() as Comment;
-      const currentVote = commentData.userVotes ? commentData.userVotes[actualUserId] : 0;
+  const ref = isGroup ? doc(db, "comment_groups", commentId) : doc(db, "comments", commentId);
 
-      if (currentVote === newVote) {
+  try {
+    const docSnapshot = await getDoc(ref);
+    if (docSnapshot.exists()) {
+      const data = docSnapshot.data() as Comment | CommentGroup;
+
+      // Eğer kullanıcı daha önce oy verdiyse, oy türünü güncelle
+      const userVote = data.userVotes ? data.userVotes[actualUserId] : null;
+      if (userVote === newVote) {
         Swal.fire({
           title: 'Hata',
           text: 'Bu yoruma zaten oy verdiniz.',
@@ -223,31 +225,51 @@ export const updateCommentLikes = async (
         return;
       }
 
+      // Oy türünü güncelle
       const updates: any = {
-        likes: increment(newVote === 1 ? 1 : currentVote === 1 ? -1 : 0),
-        dislikes: increment(newVote === -1 ? 1 : currentVote === -1 ? -1 : 0),
-        [`userVotes.${actualUserId}`]: newVote
+        ...(isGroup ? {
+          total_likes: increment(newVote === 1 ? 1 : 0),
+          total_dislikes: increment(newVote === -1 ? 1 : 0),
+        } : {
+          likes: increment(newVote === 1 ? 1 : 0),
+          dislikes: increment(newVote === -1 ? 1 : 0),
+        })
       };
 
-      await updateDoc(commentRef, updates);
+      await updateDoc(ref, updates);
 
-      const updatedCommentDoc = await getDoc(commentRef);
-      const updatedCommentData = updatedCommentDoc.data() as Comment;
+      const updatedDocSnapshot = await getDoc(ref);
+      const updatedData = updatedDocSnapshot.data() as Comment | CommentGroup;
 
-      setComments((prevComments) => {
-        const updatedComments = prevComments[stepId].map((comment) => {
-          if (comment.id === commentId) {
-            return {
-              ...comment,
-              likes: updatedCommentData.likes,
-              dislikes: updatedCommentData.dislikes,
-              userVotes: updatedCommentData.userVotes
-            };
-          }
-          return comment;
+      if (isGroup) {
+        setComments(prevComments => {
+          const updatedComments = prevComments[stepId].map((comment) => {
+            if (comment.id === commentId) {
+              return {
+                ...comment,
+                total_likes: updatedData.total_likes,
+                total_dislikes: updatedData.total_dislikes
+              };
+            }
+            return comment;
+          });
+          return { ...prevComments, [stepId]: updatedComments };
         });
-        return { ...prevComments, [stepId]: updatedComments };
-      });
+      } else {
+        setComments(prevComments => {
+          const updatedComments = prevComments[stepId].map((comment) => {
+            if (comment.id === commentId) {
+              return {
+                ...comment,
+                likes: updatedData.likes,
+                dislikes: updatedData.dislikes,
+              };
+            }
+            return comment;
+          });
+          return { ...prevComments, [stepId]: updatedComments };
+        });
+      }
 
       setUserVotes((prevVotes) => ({
         ...prevVotes,
@@ -282,4 +304,24 @@ export const checkIfCommentInGroup = async (commentId: string, groupId: string) 
     return groupData.comments.includes(commentId);
   }
   return false;
+};
+
+export const fetchCommentGroup = async (groupId: string) => {
+  const groupRef = doc(db, "comment_groups", groupId);
+  const groupDoc = await getDoc(groupRef);
+  if (groupDoc.exists()) {
+    const groupData = groupDoc.data() as CommentGroup;
+    const groupComments = await Promise.all(
+      groupData.comments.map(async (commentId) => {
+        const commentRef = doc(db, "comments", commentId);
+        const commentDoc = await getDoc(commentRef);
+        return commentDoc.exists() ? commentDoc.data() as Comment : null;
+      })
+    );
+    return {
+      ...groupData,
+      comments: groupComments.filter(comment => comment !== null)
+    };
+  }
+  return null;
 };

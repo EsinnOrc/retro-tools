@@ -8,13 +8,25 @@ interface CommentListProps {
   comments: Comment[];
   isActive: boolean;
   userVotes: { [key: string]: number };
-  updateCommentLikes: (commentId: string, stepId: string, newVote: number) => void;
+  updateCommentLikes: (commentId: string, stepId: string, newVote: number, isGroup: boolean) => void;
   tempUserId: string;
   isGroup?: boolean;
-  groupId?: string;  
+  groupId?: string;
+  groupLikes?: number;
+  groupDislikes?: number;
 }
 
-const CommentList: React.FC<CommentListProps> = ({ comments, isActive, userVotes, updateCommentLikes, tempUserId, isGroup, groupId }) => (
+const CommentList: React.FC<CommentListProps> = ({
+  comments,
+  isActive,
+  userVotes,
+  updateCommentLikes,
+  tempUserId,
+  isGroup,
+  groupId,
+  groupLikes,
+  groupDislikes
+}) => (
   <List
     dataSource={comments}
     renderItem={(comment, index) => (
@@ -40,23 +52,45 @@ const CommentList: React.FC<CommentListProps> = ({ comments, isActive, userVotes
               </div>
             )}
             {!isActive && (
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <Button
-                  icon={<LikeOutlined />}
-                  onClick={() => updateCommentLikes(comment.id, comment.step_id, 1)}
-                  style={{ marginRight: 8 }}
-                  disabled={userVotes[comment.id] === 1}
-                >
-                  {comment.likes}
-                </Button>
-                <Button
-                  icon={<DislikeOutlined />}
-                  onClick={() => updateCommentLikes(comment.id, comment.step_id, -1)}
-                  disabled={userVotes[comment.id] === -1}
-                >
-                  {comment.dislikes}
-                </Button>
-              </div>
+              isGroup ? (
+                index === 0 && (
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    <Button
+                      icon={<LikeOutlined />}
+                      onClick={() => updateCommentLikes(groupId!, comment.step_id, 1, true)}
+                      style={{ marginRight: 8 }}
+                      disabled={userVotes[groupId!] === 1}
+                    >
+                      {groupLikes}
+                    </Button>
+                    <Button
+                      icon={<DislikeOutlined />}
+                      onClick={() => updateCommentLikes(groupId!, comment.step_id, -1, true)}
+                      disabled={userVotes[groupId!] === -1}
+                    >
+                      {groupDislikes}
+                    </Button>
+                  </div>
+                )
+              ) : (
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <Button
+                    icon={<LikeOutlined />}
+                    onClick={() => updateCommentLikes(comment.id, comment.step_id, 1, false)}
+                    style={{ marginRight: 8 }}
+                    disabled={userVotes[comment.id] === 1}
+                  >
+                    {comment.likes}
+                  </Button>
+                  <Button
+                    icon={<DislikeOutlined />}
+                    onClick={() => updateCommentLikes(comment.id, comment.step_id, -1, false)}
+                    disabled={userVotes[comment.id] === -1}
+                  >
+                    {comment.dislikes}
+                  </Button>
+                </div>
+              )
             )}
           </List.Item>
         )}
