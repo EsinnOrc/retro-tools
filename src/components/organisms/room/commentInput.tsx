@@ -21,7 +21,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ stepId, newComment, setNewC
     try {
       await commentSchema.validate({ comment: newComment });
       sendComment(stepId);
-      setError(null); // Clear error after successful validation
+      setError(null);
     } catch (error) {
       if (error instanceof yup.ValidationError) {
         setError(error.message);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { List, Button, Skeleton } from "antd";
+import { List, Button } from "antd";
 import { LikeOutlined, DislikeOutlined } from '@ant-design/icons';
 import { Comment } from "./utils";
 import { Draggable } from "react-beautiful-dnd";
@@ -10,9 +10,11 @@ interface CommentListProps {
   userVotes: { [key: string]: number };
   updateCommentLikes: (commentId: string, stepId: string, newVote: number) => void;
   tempUserId: string;
+  isGroup?: boolean;
+  groupId?: string;  
 }
 
-const CommentList: React.FC<CommentListProps> = ({ comments, isActive, userVotes, updateCommentLikes, tempUserId }) => (
+const CommentList: React.FC<CommentListProps> = ({ comments, isActive, userVotes, updateCommentLikes, tempUserId, isGroup, groupId }) => (
   <List
     dataSource={comments}
     renderItem={(comment, index) => (
@@ -21,17 +23,15 @@ const CommentList: React.FC<CommentListProps> = ({ comments, isActive, userVotes
           <List.Item ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
             {comment.userId !== tempUserId ? (
               isActive ? (
-                <Skeleton active paragraph={{ rows: Math.ceil(comment.message.length / 20), width: "80%" }}>
-                  <div
-                    style={{
-                      filter: "blur(4px)",
-                      fontWeight: "normal",
-                      color: "black",
-                    }}
-                  >
-                    {comment.message}
-                  </div>
-                </Skeleton>
+                <div
+                  style={{
+                    filter: "blur(4px)",
+                    fontWeight: "normal",
+                    color: "black",
+                  }}
+                >
+                  {comment.message}
+                </div>
               ) : (
                 <div style={{ fontWeight: "normal", color: "black" }}>
                   {comment.message}

@@ -1,4 +1,4 @@
-import { collection, getDocs, getDoc, doc, query, where, onSnapshot, updateDoc, increment, setDoc } from "firebase/firestore";
+import { collection, getDocs, getDoc, doc, query, where, onSnapshot, updateDoc, increment, setDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import Swal from 'sweetalert2';
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/firebaseConfig";
@@ -40,7 +40,7 @@ export const fetchComments = (roomId: string, setComments: React.Dispatch<React.
       if (!commentsData[data.step_id]) {
         commentsData[data.step_id] = [];
       }
-      commentsData[data.step_id].push({ ...data, created_at: data.created_at.toDate() });
+      commentsData[data.step_id].push({ ...data, created_at: new Date(data.created_at) });
     });
     Object.keys(commentsData).forEach(stepId => {
       commentsData[stepId].sort((a, b) => a.created_at.getTime() - b.created_at.getTime());
@@ -159,7 +159,7 @@ export const sendComment = async (
 
   try {
     await setDoc(doc(db, "comments", commentId), comment);
-    console.log("Document written with ID: ", commentId); // Debug için ekleyelim
+    console.log("Document written with ID: ", commentId);
   } catch (error) {
     console.error("Error adding document: ", error);
   }
