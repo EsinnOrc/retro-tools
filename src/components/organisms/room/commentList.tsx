@@ -39,7 +39,7 @@ const CommentList: React.FC<CommentListProps> = ({
       const isGroup = !!groupId;
 
       if (isGroup && commentGroups[groupId!].indexOf(comment.id) !== 0) {
-        // Gruplanan yorumların sadece ilkini göstereceğiz
+     
         return null;
       }
 

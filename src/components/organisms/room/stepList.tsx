@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { DragDropContext, Droppable, DropResult } from "react-beautiful-dnd";
-import CommentList from "./CommentList";
-import CommentInput from "./CommentInput";
+import CommentList from "./commentList";
+import CommentInput from "./commentInput";
 import {
   Step,
   Comment,
@@ -82,7 +82,6 @@ const StepList: React.FC<StepListProps> = ({
       );
 
       if (sourceGroupId && destinationGroupId) {
-        // Eğer her iki yorum da farklı gruplara aitse, bu grupları birleştirelim
         const newGroup = Array.from(
           new Set([
             ...commentGroups[sourceGroupId],
@@ -117,7 +116,6 @@ const StepList: React.FC<StepListProps> = ({
         const groupRef = doc(db, "comment_groups", newGroupId);
         await setDoc(groupRef, groupData, { merge: true });
 
-        console.log("Group saved to Firebase:", groupData);
         setGroupLikes({
           ...groupLikes,
           [newGroupId]: groupData.total_likes,
@@ -127,10 +125,9 @@ const StepList: React.FC<StepListProps> = ({
           [newGroupId]: groupData.total_dislikes,
         });
       } else if (sourceGroupId) {
-        // Eğer sadece taşınan yorum bir gruba aitse, bu gruba hedef yorumu ekleyelim
-        const newGroup = [
-          ...new Set([...commentGroups[sourceGroupId], combinedWithComment.id]),
-        ];
+        const newGroup = Array.from(
+          new Set([...commentGroups[sourceGroupId], combinedWithComment.id])
+        );
         setCommentGroups({
           ...commentGroups,
           [sourceGroupId]: newGroup,
@@ -156,7 +153,6 @@ const StepList: React.FC<StepListProps> = ({
         const groupRef = doc(db, "comment_groups", sourceGroupId);
         await setDoc(groupRef, groupData, { merge: true });
 
-        console.log("Group updated to Firebase:", groupData);
         setGroupLikes({
           ...groupLikes,
           [sourceGroupId]: groupData.total_likes,
@@ -166,10 +162,9 @@ const StepList: React.FC<StepListProps> = ({
           [sourceGroupId]: groupData.total_dislikes,
         });
       } else if (destinationGroupId) {
-        // Eğer sadece hedef yorum bir gruba aitse, bu gruba taşınan yorumu ekleyelim
-        const newGroup = [
-          ...new Set([...commentGroups[destinationGroupId], movedComment.id]),
-        ];
+        const newGroup = Array.from(
+          new Set([...commentGroups[destinationGroupId], movedComment.id])
+        );
         setCommentGroups({
           ...commentGroups,
           [destinationGroupId]: newGroup,
@@ -195,7 +190,6 @@ const StepList: React.FC<StepListProps> = ({
         const groupRef = doc(db, "comment_groups", destinationGroupId);
         await setDoc(groupRef, groupData, { merge: true });
 
-        console.log("Group updated to Firebase:", groupData);
         setGroupLikes({
           ...groupLikes,
           [destinationGroupId]: groupData.total_likes,
@@ -205,7 +199,6 @@ const StepList: React.FC<StepListProps> = ({
           [destinationGroupId]: groupData.total_dislikes,
         });
       } else {
-        // Eğer her iki yorum da herhangi bir gruba ait değilse, yeni bir grup oluştur
         const groupId = uuidv4();
         const newGroup = [movedComment.id, combinedWithComment.id];
         setCommentGroups({
@@ -233,7 +226,6 @@ const StepList: React.FC<StepListProps> = ({
         const groupRef = doc(db, "comment_groups", groupId);
         await setDoc(groupRef, groupData, { merge: true });
 
-        console.log("Group saved to Firebase:", groupData);
         setGroupLikes({
           ...groupLikes,
           [groupId]: groupData.total_likes,
@@ -293,8 +285,6 @@ const StepList: React.FC<StepListProps> = ({
   useEffect(() => {
     if (roomId) {
       fetchComments(roomId, setComments, setCommentGroups, setGroupLikes, setGroupDislikes);
-    } else {
-      console.error("Invalid roomId:", roomId);
     }
   }, [roomId]);
 

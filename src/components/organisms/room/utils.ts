@@ -83,7 +83,6 @@ export const fetchComments = (
         (a, b) => a.created_at.getTime() - b.created_at.getTime()
       );
     });
-    console.log("Comments Data:", commentsData); // Log comments data
     setComments(commentsData);
   });
 
@@ -99,19 +98,12 @@ export const fetchComments = (
       groupDislikesData[doc.id] = data.total_dislikes;
     });
 
-    console.log("Groups Data:", groupsData); // Log groups data
-    console.log("Group Likes Data:", groupLikesData); // Log group likes data
-    console.log("Group Dislikes Data:", groupDislikesData); // Log group dislikes data
-
     try {
       setCommentGroups(groupsData);
       setGroupLikes(groupLikesData);
       setGroupDislikes(groupDislikesData);
     } catch (error) {
       console.error("Error setting state:", error);
-      console.error("groupsData:", groupsData);
-      console.error("groupLikesData:", groupLikesData);
-      console.error("groupDislikesData:", groupDislikesData);
     }
   });
 };
@@ -236,7 +228,6 @@ export const sendComment = async (
 
   try {
     await setDoc(doc(db, "comments", commentId), comment);
-    console.log("Document written with ID: ", commentId);
   } catch (error) {
     console.error("Error adding document: ", error);
   }
@@ -300,7 +291,6 @@ export const updateCommentLikes = async (
       const data = docSnapshot.data() as Comment | CommentGroup;
       const userVote = data.userVotes ? data.userVotes[actualUserId] : null;
 
-      // Eğer kullanıcı daha önce oy verdiyse, oyu sıfırla
       if (userVote !== null) {
         const previousVote = userVote;
         if (previousVote === newVote) {
@@ -345,35 +335,26 @@ export const updateCommentLikes = async (
       const updatedDocSnapshot = await getDoc(ref);
       const updatedData = updatedDocSnapshot.data() as Comment | CommentGroup;
 
-      if (isGroup) {
-        setComments((prevComments) => {
-          const updatedComments = prevComments[stepId].map((comment) => {
-            if (comment.id === commentId) {
-              return {
-                ...comment,
-                total_likes: updatedData.total_likes,
-                total_dislikes: updatedData.total_dislikes,
-              };
-            }
-            return comment;
-          });
-          return { ...prevComments, [stepId]: updatedComments };
+      setComments((prevComments) => {
+        const updatedComments = prevComments[stepId].map((comment) => {
+          if (comment.id === commentId) {
+            return {
+              ...comment,
+              ...(isGroup
+                ? {
+                    total_likes: (updatedData as CommentGroup).total_likes,
+                    total_dislikes: (updatedData as CommentGroup).total_dislikes,
+                  }
+                : {
+                    likes: (updatedData as Comment).likes,
+                    dislikes: (updatedData as Comment).dislikes,
+                  }),
+            };
+          }
+          return comment;
         });
-      } else {
-        setComments((prevComments) => {
-          const updatedComments = prevComments[stepId].map((comment) => {
-            if (comment.id === commentId) {
-              return {
-                ...comment,
-                likes: updatedData.likes,
-                dislikes: updatedData.dislikes,
-              };
-            }
-            return comment;
-          });
-          return { ...prevComments, [stepId]: updatedComments };
-        });
-      }
+        return { ...prevComments, [stepId]: updatedComments };
+      });
 
       setUserVotes((prevVotes) => ({
         ...prevVotes,
@@ -387,13 +368,13 @@ export const updateCommentLikes = async (
   }
 };
 
+
 export const saveCommentGroup = async (
   groupId: string,
   groupData: CommentGroup
 ) => {
   const groupRef = doc(db, "comment_groups", groupId);
   await setDoc(groupRef, groupData, { merge: true });
-  console.log("Group saved to Firebase:", groupData);
 };
 
 export const updateCommentGroup = async (
@@ -407,7 +388,6 @@ export const updateCommentGroup = async (
       ? { comments: arrayUnion(commentId) }
       : { comments: arrayRemove(commentId) };
   await updateDoc(groupRef, updateData);
-  console.log("Group updated in Firebase:", updateData);
 };
 
 export const checkIfCommentInGroup = async (
