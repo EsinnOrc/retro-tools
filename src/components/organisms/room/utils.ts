@@ -20,6 +20,14 @@ export interface Step {
   name: string;
 }
 
+export interface CommentGroup {
+  id: string;
+  comments: string[];
+  room_id: string;
+  total_likes: number;
+  total_dislikes: number;
+}
+
 export const fetchComments = (roomId: string, setComments: React.Dispatch<React.SetStateAction<{ [key: string]: Comment[] }>>) => {
   const commentsQuery = query(
     collection(db, "comments"),
@@ -151,7 +159,7 @@ export const sendComment = async (
 
   try {
     await setDoc(doc(db, "comments", commentId), comment);
-    console.log("Document written with ID: ", commentId);
+    console.log("Document written with ID: ", commentId); // Debug için ekleyelim
   } catch (error) {
     console.error("Error adding document: ", error);
   }
@@ -255,4 +263,27 @@ export const updateCommentLikes = async (
   } catch (error) {
     console.error("Error updating comment likes/dislikes:", error);
   }
+};
+
+export const saveCommentGroup = async (groupId: string, groupData: CommentGroup) => {
+  const groupRef = doc(db, "comment_groups", groupId);
+  await setDoc(groupRef, groupData, { merge: true });
+  console.log("Group saved to Firebase:", groupData);
+};
+
+export const updateCommentGroup = async (groupId: string, commentId: string, action: "add" | "remove") => {
+  const groupRef = doc(db, "comment_groups", groupId);
+  const updateData = action === "add" ? { comments: arrayUnion(commentId) } : { comments: arrayRemove(commentId) };
+  await updateDoc(groupRef, updateData);
+  console.log("Group updated in Firebase:", updateData);
+};
+
+export const checkIfCommentInGroup = async (commentId: string, groupId: string) => {
+  const groupRef = doc(db, "comment_groups", groupId);
+  const groupDoc = await getDoc(groupRef);
+  if (groupDoc.exists()) {
+    const groupData = groupDoc.data() as CommentGroup;
+    return groupData.comments.includes(commentId);
+  }
+  return false;
 };

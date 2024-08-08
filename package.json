@@ -16,13 +16,16 @@
     "firebase": "^10.12.4",
     "next": "14.2.5",
     "react": "^18",
+    "react-beautiful-dnd": "^13.1.1",
     "react-dom": "^18",
     "react-hook-form": "^7.52.1",
     "sass": "^1.77.8",
     "socket.io": "^4.7.5",
     "socket.io-client": "^4.7.5",
+    "styled-components": "^6.1.12",
     "sweetalert2": "^11.12.4",
-    "uuid": "^10.0.0"
+    "uuid": "^10.0.0",
+    "yup": "^1.4.0"
   },
   "devDependencies": {
     "@types/node": "^20",
