@@ -56,16 +56,6 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    signOut(auth)
-      .then(() => {
-        setUser(null);
-      })
-      .catch((error) => {
-        console.error("Error signing out:", error);
-      });
-  };
-
   if (!user) {
     return null;
   }
@@ -97,12 +87,14 @@ const DashboardPage: React.FC = () => {
         <h2>Create a New Template</h2>
 
         <CardGroup cards={cardData} />
-        <Pagination
-          total={templates.length}
-          pageSize={pageSize}
-          currentPage={currentPage}
-          onPageChange={handlePageChange}
-        />
+        {templates.length > pageSize && (
+          <Pagination
+            total={templates.length}
+            pageSize={pageSize}
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+          />
+        )}
       </div>
     </Layout>
   );
