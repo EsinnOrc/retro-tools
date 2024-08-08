@@ -1,5 +1,18 @@
-import { collection, getDocs, getDoc, doc, query, where, onSnapshot, updateDoc, increment, setDoc, arrayUnion, arrayRemove } from "firebase/firestore";
-import Swal from 'sweetalert2';
+import {
+  collection,
+  getDocs,
+  getDoc,
+  doc,
+  query,
+  where,
+  onSnapshot,
+  updateDoc,
+  increment,
+  setDoc,
+  arrayUnion,
+  arrayRemove,
+} from "firebase/firestore";
+import Swal from "sweetalert2";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/firebaseConfig";
 
@@ -29,7 +42,12 @@ export interface CommentGroup {
   userVotes?: { [key: string]: number };
 }
 
-export const fetchComments = (roomId: string, setComments: React.Dispatch<React.SetStateAction<{ [key: string]: Comment[] }>>) => {
+export const fetchComments = (
+  roomId: string,
+  setComments: React.Dispatch<
+    React.SetStateAction<{ [key: string]: Comment[] }>
+  >
+) => {
   const commentsQuery = query(
     collection(db, "comments"),
     where("room_id", "==", roomId)
@@ -41,10 +59,15 @@ export const fetchComments = (roomId: string, setComments: React.Dispatch<React.
       if (!commentsData[data.step_id]) {
         commentsData[data.step_id] = [];
       }
-      commentsData[data.step_id].push({ ...data, created_at: new Date(data.created_at) });
+      commentsData[data.step_id].push({
+        ...data,
+        created_at: new Date(data.created_at),
+      });
     });
-    Object.keys(commentsData).forEach(stepId => {
-      commentsData[stepId].sort((a, b) => a.created_at.getTime() - b.created_at.getTime());
+    Object.keys(commentsData).forEach((stepId) => {
+      commentsData[stepId].sort(
+        (a, b) => a.created_at.getTime() - b.created_at.getTime()
+      );
     });
     setComments(commentsData);
   });
@@ -55,8 +78,15 @@ export const fetchRoomData = async (
   setTemplateOwnerId: React.Dispatch<React.SetStateAction<string | null>>,
   setSteps: React.Dispatch<React.SetStateAction<Step[]>>,
   setIsActive: React.Dispatch<React.SetStateAction<boolean>>,
-  fetchComments: (roomId: string, setComments: React.Dispatch<React.SetStateAction<{ [key: string]: Comment[] }>>) => void,
-  setComments: React.Dispatch<React.SetStateAction<{ [key: string]: Comment[] }>>
+  fetchComments: (
+    roomId: string,
+    setComments: React.Dispatch<
+      React.SetStateAction<{ [key: string]: Comment[] }>
+    >
+  ) => void,
+  setComments: React.Dispatch<
+    React.SetStateAction<{ [key: string]: Comment[] }>
+  >
 ) => {
   try {
     const roomRef = doc(db, "rooms", roomId);
@@ -148,7 +178,7 @@ export const sendComment = async (
     dislikes: 0,
     created_at: new Date(),
     room_id: roomId as string,
-    userVotes: {}
+    userVotes: {},
   };
 
   try {
@@ -167,14 +197,14 @@ export const finalizeComments = async (
   setIsFinalized: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
   Swal.fire({
-    title: 'Emin misiniz?',
+    title: "Emin misiniz?",
     text: "Bu işlemi geri alamazsınız!",
-    icon: 'warning',
+    icon: "warning",
     showCancelButton: true,
-    confirmButtonColor: '#3085d6',
-    cancelButtonColor: '#d33',
-    confirmButtonText: 'Evet, sonuçlandır!',
-    cancelButtonText: 'Hayır, iptal et'
+    confirmButtonColor: "#3085d6",
+    cancelButtonColor: "#d33",
+    confirmButtonText: "Evet, sonuçlandır!",
+    cancelButtonText: "Hayır, iptal et",
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
@@ -185,11 +215,10 @@ export const finalizeComments = async (
         setIsActive(false);
         setIsFinalized(true);
         Swal.fire(
-          'Sonuçlandırıldı!',
-          'Yorumlar başarıyla sonuçlandırıldı.',
-          'success'
-        ).then(() => {
-        });
+          "Sonuçlandırıldı!",
+          "Yorumlar başarıyla sonuçlandırıldı.",
+          "success"
+        ).then(() => {});
       } catch (error) {
         console.error("Error updating document: ", error);
       }
@@ -202,11 +231,15 @@ export const updateCommentLikes = async (
   stepId: string,
   newVote: number,
   actualUserId: string,
-  setComments: React.Dispatch<React.SetStateAction<{ [key: string]: Comment[] }>>,
+  setComments: React.Dispatch<
+    React.SetStateAction<{ [key: string]: Comment[] }>
+  >,
   setUserVotes: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>,
   isGroup: boolean
 ) => {
-  const ref = isGroup ? doc(db, "comment_groups", commentId) : doc(db, "comments", commentId);
+  const ref = isGroup
+    ? doc(db, "comment_groups", commentId)
+    : doc(db, "comments", commentId);
 
   try {
     const docSnapshot = await getDoc(ref);
@@ -217,23 +250,25 @@ export const updateCommentLikes = async (
       const userVote = data.userVotes ? data.userVotes[actualUserId] : null;
       if (userVote === newVote) {
         Swal.fire({
-          title: 'Hata',
-          text: 'Bu yoruma zaten oy verdiniz.',
-          icon: 'error',
-          confirmButtonText: 'Tamam'
+          title: "Hata",
+          text: "Bu yoruma zaten oy verdiniz.",
+          icon: "error",
+          confirmButtonText: "Tamam",
         });
         return;
       }
 
       // Oy türünü güncelle
       const updates: any = {
-        ...(isGroup ? {
-          total_likes: increment(newVote === 1 ? 1 : 0),
-          total_dislikes: increment(newVote === -1 ? 1 : 0),
-        } : {
-          likes: increment(newVote === 1 ? 1 : 0),
-          dislikes: increment(newVote === -1 ? 1 : 0),
-        })
+        ...(isGroup
+          ? {
+              total_likes: increment(newVote === 1 ? 1 : 0),
+              total_dislikes: increment(newVote === -1 ? 1 : 0),
+            }
+          : {
+              likes: increment(newVote === 1 ? 1 : 0),
+              dislikes: increment(newVote === -1 ? 1 : 0),
+            }),
       };
 
       await updateDoc(ref, updates);
@@ -242,13 +277,13 @@ export const updateCommentLikes = async (
       const updatedData = updatedDocSnapshot.data() as Comment | CommentGroup;
 
       if (isGroup) {
-        setComments(prevComments => {
+        setComments((prevComments) => {
           const updatedComments = prevComments[stepId].map((comment) => {
             if (comment.id === commentId) {
               return {
                 ...comment,
                 total_likes: updatedData.total_likes,
-                total_dislikes: updatedData.total_dislikes
+                total_dislikes: updatedData.total_dislikes,
               };
             }
             return comment;
@@ -256,7 +291,7 @@ export const updateCommentLikes = async (
           return { ...prevComments, [stepId]: updatedComments };
         });
       } else {
-        setComments(prevComments => {
+        setComments((prevComments) => {
           const updatedComments = prevComments[stepId].map((comment) => {
             if (comment.id === commentId) {
               return {
@@ -273,7 +308,7 @@ export const updateCommentLikes = async (
 
       setUserVotes((prevVotes) => ({
         ...prevVotes,
-        [commentId]: newVote
+        [commentId]: newVote,
       }));
     } else {
       console.error("No document to update:", commentId);
@@ -283,20 +318,33 @@ export const updateCommentLikes = async (
   }
 };
 
-export const saveCommentGroup = async (groupId: string, groupData: CommentGroup) => {
+export const saveCommentGroup = async (
+  groupId: string,
+  groupData: CommentGroup
+) => {
   const groupRef = doc(db, "comment_groups", groupId);
   await setDoc(groupRef, groupData, { merge: true });
   console.log("Group saved to Firebase:", groupData);
 };
 
-export const updateCommentGroup = async (groupId: string, commentId: string, action: "add" | "remove") => {
+export const updateCommentGroup = async (
+  groupId: string,
+  commentId: string,
+  action: "add" | "remove"
+) => {
   const groupRef = doc(db, "comment_groups", groupId);
-  const updateData = action === "add" ? { comments: arrayUnion(commentId) } : { comments: arrayRemove(commentId) };
+  const updateData =
+    action === "add"
+      ? { comments: arrayUnion(commentId) }
+      : { comments: arrayRemove(commentId) };
   await updateDoc(groupRef, updateData);
   console.log("Group updated in Firebase:", updateData);
 };
 
-export const checkIfCommentInGroup = async (commentId: string, groupId: string) => {
+export const checkIfCommentInGroup = async (
+  commentId: string,
+  groupId: string
+) => {
   const groupRef = doc(db, "comment_groups", groupId);
   const groupDoc = await getDoc(groupRef);
   if (groupDoc.exists()) {
@@ -315,12 +363,12 @@ export const fetchCommentGroup = async (groupId: string) => {
       groupData.comments.map(async (commentId) => {
         const commentRef = doc(db, "comments", commentId);
         const commentDoc = await getDoc(commentRef);
-        return commentDoc.exists() ? commentDoc.data() as Comment : null;
+        return commentDoc.exists() ? (commentDoc.data() as Comment) : null;
       })
     );
     return {
       ...groupData,
-      comments: groupComments.filter(comment => comment !== null)
+      comments: groupComments.filter((comment) => comment !== null),
     };
   }
   return null;
