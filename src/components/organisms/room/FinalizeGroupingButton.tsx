@@ -9,7 +9,7 @@ interface FinalizeGroupingButtonProps {
   isFinalized: boolean;
   templateOwnerId: string | null;
   setTemplateOwnerId: React.Dispatch<React.SetStateAction<string | null>>;
-  setIActive: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsActive: React.Dispatch<React.SetStateAction<boolean>>;
   setIsFinalized: React.Dispatch<React.SetStateAction<boolean>>;
   actualUserId: string;
   roomId: string;
@@ -24,7 +24,6 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
   setIsFinalized,
   isFinalized,
   setTemplateOwnerId,
-  setIActive,
 }) => {
   const [isActive, setIsActive] = useState(false);
   const router = typeof window !== "undefined" ? useRouter() : null;
