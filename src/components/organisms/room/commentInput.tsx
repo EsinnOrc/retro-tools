@@ -16,7 +16,7 @@ interface CommentInputProps {
 }
 
 const commentSchema = yup.object().shape({
-  comment: yup.string().required("Yorum boş olamaz"),
+  comment: yup.string().required("Comment cannot be empty"),
 });
 
 const CommentInput: React.FC<CommentInputProps> = ({
@@ -63,7 +63,7 @@ const CommentInput: React.FC<CommentInputProps> = ({
           <Col span={6}>
             {" "}
             <Buttons
-              text="Gönder"
+              text="Send"
               onClick={handleSendComment}
               className={styles.button}
             />
