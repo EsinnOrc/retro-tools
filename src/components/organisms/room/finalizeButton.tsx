@@ -7,7 +7,7 @@ interface FinalizeButtonProps {
   actualUserId: string;
   isActive: boolean;
   setIsActive: React.Dispatch<React.SetStateAction<boolean>>;
-  setIsFinished: React.Dispatch<React.SetStateAction<boolean>>; // isFinished durumunu ayarlamak için
+  setIsFinished: React.Dispatch<React.SetStateAction<boolean>>;
   roomId: string;
 }
 
@@ -23,7 +23,7 @@ const FinalizeButton: React.FC<FinalizeButtonProps> = ({
     finalizeComments(roomId, (isActive) => {
       setIsActive(isActive);
       if (!isActive) {
-        setIsFinished(false); // isFinished'ı false yaparak 2. aşamaya geçmesini sağlıyoruz
+        setIsFinished(false);
       }
     }, setIsFinished);
   };

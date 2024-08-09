@@ -70,14 +70,14 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
         try {
           const roomRef = doc(db, "rooms", roomId);
           await updateDoc(roomRef, {
-            is_finished: true, // is_finished'ı true yapıyoruz.
+            is_finished: true,
           });
           Swal.fire(
             "Sonuçlandırıldı!",
             "Yorumlar başarıyla sonuçlandırıldı.",
             "success"
           );
-          onFinalize(); // 3. aşamaya geçiş için çağırıyoruz.
+          onFinalize();
         } catch (error) {
           console.error("Error finalizing grouping:", error);
         }
