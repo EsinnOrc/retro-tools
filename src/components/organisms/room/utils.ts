@@ -47,9 +47,15 @@ export const fetchComments = (
   setComments: React.Dispatch<
     React.SetStateAction<{ [key: string]: Comment[] }>
   >,
-  setCommentGroups: React.Dispatch<React.SetStateAction<{ [key: string]: string[] }>>,
-  setGroupLikes: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>,
-  setGroupDislikes: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>
+  setCommentGroups: React.Dispatch<
+    React.SetStateAction<{ [key: string]: string[] }>
+  >,
+  setGroupLikes: React.Dispatch<
+    React.SetStateAction<{ [key: string]: number }>
+  >,
+  setGroupDislikes: React.Dispatch<
+    React.SetStateAction<{ [key: string]: number }>
+  >
 ) => {
   if (!roomId) {
     console.error("Invalid roomId:", roomId);
@@ -118,16 +124,28 @@ export const fetchRoomData = async (
     setComments: React.Dispatch<
       React.SetStateAction<{ [key: string]: Comment[] }>
     >,
-    setCommentGroups: React.Dispatch<React.SetStateAction<{ [key: string]: string[] }>>,
-    setGroupLikes: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>,
-    setGroupDislikes: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>
+    setCommentGroups: React.Dispatch<
+      React.SetStateAction<{ [key: string]: string[] }>
+    >,
+    setGroupLikes: React.Dispatch<
+      React.SetStateAction<{ [key: string]: number }>
+    >,
+    setGroupDislikes: React.Dispatch<
+      React.SetStateAction<{ [key: string]: number }>
+    >
   ) => void,
   setComments: React.Dispatch<
     React.SetStateAction<{ [key: string]: Comment[] }>
   >,
-  setCommentGroups: React.Dispatch<React.SetStateAction<{ [key: string]: string[] }>>,
-  setGroupLikes: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>,
-  setGroupDislikes: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>
+  setCommentGroups: React.Dispatch<
+    React.SetStateAction<{ [key: string]: string[] }>
+  >,
+  setGroupLikes: React.Dispatch<
+    React.SetStateAction<{ [key: string]: number }>
+  >,
+  setGroupDislikes: React.Dispatch<
+    React.SetStateAction<{ [key: string]: number }>
+  >
 ) => {
   try {
     if (!roomId) {
@@ -155,7 +173,13 @@ export const fetchRoomData = async (
         }));
         setSteps(stepsList);
 
-        fetchComments(roomId, setComments, setCommentGroups, setGroupLikes, setGroupDislikes);
+        fetchComments(
+          roomId,
+          setComments,
+          setCommentGroups,
+          setGroupLikes,
+          setGroupDislikes
+        );
       } else {
         console.error("No such template!");
       }
@@ -245,8 +269,8 @@ export const finalizeComments = async (
     text: "Bu işlemi geri alamazsınız!",
     icon: "warning",
     showCancelButton: true,
-    confirmButtonColor: "#3085d6",
-    cancelButtonColor: "#d33",
+    confirmButtonColor: "#219ebc",
+    cancelButtonColor: "rgba(99, 99, 99, 0.5) ",
     confirmButtonText: "Evet, sonuçlandır!",
     cancelButtonText: "Hayır, iptal et",
   }).then(async (result) => {
@@ -257,7 +281,7 @@ export const finalizeComments = async (
           is_active: false,
         });
         setIsActive(false);
-        setIsFinalized(true);
+        setIsFinalized(false);
         Swal.fire(
           "Sonuçlandırıldı!",
           "Yorumlar başarıyla sonuçlandırıldı.",
@@ -343,7 +367,8 @@ export const updateCommentLikes = async (
               ...(isGroup
                 ? {
                     total_likes: (updatedData as CommentGroup).total_likes,
-                    total_dislikes: (updatedData as CommentGroup).total_dislikes,
+                    total_dislikes: (updatedData as CommentGroup)
+                      .total_dislikes,
                   }
                 : {
                     likes: (updatedData as Comment).likes,
@@ -367,7 +392,6 @@ export const updateCommentLikes = async (
     console.error("Error updating comment likes/dislikes:", error);
   }
 };
-
 
 export const saveCommentGroup = async (
   groupId: string,
