@@ -3,7 +3,6 @@ import Swal from "sweetalert2";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebaseConfig";
 import Buttons from "@/components/atoms/buttons/button";
-import { useRouter } from "next/router";
 
 interface FinalizeGroupingButtonProps {
   isFinalized: boolean;
@@ -26,7 +25,6 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
   setTemplateOwnerId,
 }) => {
   const [isActive, setIsActive] = useState(false);
-  const router = typeof window !== "undefined" ? useRouter() : null;
 
   useEffect(() => {
     const fetchRoomDetails = async () => {
@@ -69,7 +67,7 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
       confirmButtonColor: "#219ebc",
       cancelButtonColor: "rgba(99, 99, 99, 0.5) ",
       confirmButtonText: "Yes, finalize!",
-      cancelButtonText: "No, cancel",
+      cancelButtonText: " No, cancel",
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
@@ -86,11 +84,6 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
             "Comments concluded successfully.",
             "success"
           );
-
-          if (router) {
-            router.push("/tasks"); // Replace with your desired route
-          }
-
           onFinalize(); // This will trigger the next step
         } catch (error) {
           console.error("Error finalizing grouping:", error);

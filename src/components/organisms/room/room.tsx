@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from "uuid";
 import StepList from "./stepList";
 import FinalizeButton from "./finalizeButton";
 import FinalizeGroupingButton from "./FinalizeGroupingButton";
+import RoomTask from "./roomTask";
 import {
   fetchComments,
   fetchRoomData,
@@ -172,12 +173,17 @@ const Room: React.FC = () => {
             setTemplateOwnerId={setTemplateOwnerId}
             actualUserId={actualUserId}
             roomId={roomId as string}
+            onFinalize={next}
             isFinalized={isFinalized}
             setIsFinalized={setIsFinalized}
             setIsActive={setIsActive}
           />
         </div>
       ),
+    },
+    {
+      title: "Toplantı Notları",
+      content: <RoomTask roomId={roomId as string} />,
     },
   ];
 
@@ -189,7 +195,16 @@ const Room: React.FC = () => {
         ))}
       </Steps>
       <div style={{ marginTop: 24 }}>{stepsContent[currentStep].content}</div>
-      <div style={{ marginTop: 24 }}></div>
+      <div style={{ marginTop: 24 }}>
+        {currentStep === stepsContent.length - 1 && (
+          <Button
+            type="primary"
+            onClick={() => message.success("Tüm adımlar tamamlandı!")}
+          >
+            Export
+          </Button>
+        )}
+      </div>
     </div>
   );
 };
