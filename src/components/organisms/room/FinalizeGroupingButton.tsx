@@ -5,23 +5,26 @@ import { db } from "@/firebaseConfig";
 import Buttons from "@/components/atoms/buttons/button";
 
 interface FinalizeGroupingButtonProps {
-  initialTemplateOwnerId: string | null;
-
+  isFinalized: boolean;
+  templateOwnerId: string | null;
+  setTemplateOwnerId: React.Dispatch<React.SetStateAction<string | null>>;
+  setIsActive: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsFinalized: React.Dispatch<React.SetStateAction<boolean>>;
   actualUserId: string;
   roomId: string;
   onFinalize: () => void;
 }
 
 const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
-  initialTemplateOwnerId,
+  templateOwnerId,
   actualUserId,
   roomId,
   onFinalize,
+  setIsFinalized,
+  isFinalized,
+  setTemplateOwnerId,
 }) => {
   const [isActive, setIsActive] = useState(false);
-  const [templateOwnerId, setTemplateOwnerId] = useState<string | null>(
-    initialTemplateOwnerId
-  );
 
   useEffect(() => {
     const fetchRoomDetails = async () => {
@@ -37,7 +40,7 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
           const roomData = roomDoc.data();
           setIsActive(roomData.is_active);
 
-          if (!initialTemplateOwnerId) {
+          if (!templateOwnerId) {
             const templateRef = doc(db, "templates", roomData.template_id);
             const templateDoc = await getDoc(templateRef);
 
@@ -53,7 +56,7 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
     };
 
     fetchRoomDetails();
-  }, [roomId, initialTemplateOwnerId]);
+  }, [roomId, templateOwnerId]);
 
   const handleFinalizeGrouping = async () => {
     Swal.fire({
@@ -61,8 +64,8 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
       text: "Bu işlemi geri alamazsınız!",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
+      confirmButtonColor: "#219ebc",
+      cancelButtonColor: "rgba(99, 99, 99, 0.5) ",
       confirmButtonText: "Evet, sonuçlandır!",
       cancelButtonText: "Hayır, iptal et",
     }).then(async (result) => {
@@ -71,20 +74,23 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
           const roomRef = doc(db, "rooms", roomId);
           await updateDoc(roomRef, {
             is_finished: true,
+            is_finalized: true, // Set this to true only when finalizing
           });
+          if (!isFinalized) {
+            setIsFinalized(true);
+          }
           Swal.fire(
             "Sonuçlandırıldı!",
             "Yorumlar başarıyla sonuçlandırıldı.",
             "success"
           );
-          onFinalize();
+          onFinalize(); // This will trigger the next step
         } catch (error) {
           console.error("Error finalizing grouping:", error);
         }
       }
     });
   };
-  
 
   return (
     <>
