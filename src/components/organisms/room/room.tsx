@@ -189,22 +189,13 @@ const Room: React.FC = () => {
 
   return (
     <div>
-      <Steps current={currentStep}>
+      <Steps current={currentStep} style={{ marginTop: 23 }}>
         {stepsContent.map((item) => (
           <Steps.Step key={item.title} title={item.title} />
         ))}
       </Steps>
       <div style={{ marginTop: 24 }}>{stepsContent[currentStep].content}</div>
-      <div style={{ marginTop: 24 }}>
-        {currentStep === stepsContent.length - 1 && (
-          <Button
-            type="primary"
-            onClick={() => message.success("Tüm adımlar tamamlandı!")}
-          >
-            Export
-          </Button>
-        )}
-      </div>
+      <div style={{ marginTop: 24 }}></div>
     </div>
   );
 };

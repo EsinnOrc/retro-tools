@@ -84,7 +84,7 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
             "Comments concluded successfully.",
             "success"
           );
-          onFinalize(); // This will trigger the next step
+          onFinalize();
         } catch (error) {
           console.error("Error finalizing grouping:", error);
         }

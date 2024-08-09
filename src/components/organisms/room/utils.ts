@@ -279,13 +279,13 @@ export const finalizeComments = async (
         const roomRef = doc(db, "rooms", roomId as string);
         await updateDoc(roomRef, {
           is_active: false,
-          is_finalized: false, // Set to false to remain in the second step
+          is_finalized: false,
         });
         setIsActive(false);
-        setIsFinalized(false); // Ensure it stays false to avoid moving to step 3
+        setIsFinalized(false);
         Swal.fire(
-          "Sonuçlandırıldı!",
-          "Yorumlar başarıyla sonuçlandırıldı.",
+          "Concluded!",
+          "Comments completed successfully.",
           "success"
         ).then(() => {});
       } catch (error) {
