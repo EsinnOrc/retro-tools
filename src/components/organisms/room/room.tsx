@@ -113,7 +113,7 @@ const Room: React.FC = () => {
         roomId={roomId as string}
       />
       <FinalizeGroupingButton
-        templateOwnerId={templateOwnerId}
+        initialTemplateOwnerId={templateOwnerId}
         actualUserId={actualUserId}
         roomId={roomId as string}
       />

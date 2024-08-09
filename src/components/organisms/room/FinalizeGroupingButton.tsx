@@ -5,18 +5,18 @@ import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebaseConfig";
 
 interface FinalizeGroupingButtonProps {
-  templateOwnerId: string | null;
+  initialTemplateOwnerId: string | null;
   actualUserId: string;
   roomId: string;
 }
 
 const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
-  templateOwnerId,
+  initialTemplateOwnerId,
   actualUserId,
   roomId,
 }) => {
   const [isActive, setIsActive] = useState(false);
-  const [isFinished, setIsFinished] = useState(false);
+  const [templateOwnerId, setTemplateOwnerId] = useState<string | null>(initialTemplateOwnerId);
 
   useEffect(() => {
     const fetchRoomDetails = async () => {
@@ -30,18 +30,25 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
 
         if (roomDoc.exists()) {
           const roomData = roomDoc.data();
-          if (!roomData.is_active) {
-            setIsActive(roomData.is_active);
-            setIsFinished(roomData.is_finished);
+          setIsActive(roomData.is_active);
+
+          if (!initialTemplateOwnerId) {
+            const templateRef = doc(db, "templates", roomData.template_id);
+            const templateDoc = await getDoc(templateRef);
+
+            if (templateDoc.exists()) {
+              const templateData = templateDoc.data();
+              setTemplateOwnerId(templateData.user_id);
+            }
           }
         }
       } catch (error) {
-        // Hata yönetimi
+        console.error("Error fetching room details:", error);
       }
     };
 
     fetchRoomDetails();
-  }, [roomId]);
+  }, [roomId, initialTemplateOwnerId]);
 
   const handleFinalizeGrouping = async () => {
     Swal.fire({
@@ -58,12 +65,11 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
         try {
           const roomRef = doc(db, "rooms", roomId);
           await updateDoc(roomRef, {
-            is_finished: false,
+            is_finished: false, // Veritabanına is_finished ekliyoruz
           });
-          setIsFinished(false);
           Swal.fire("Sonuçlandırıldı!", "Yorumlar başarıyla sonuçlandırıldı.", "success");
         } catch (error) {
-          // Hata yönetimi
+          console.error("Error finalizing grouping:", error);
         }
       }
     });
@@ -71,7 +77,7 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
 
   return (
     <>
-      {templateOwnerId === actualUserId && isFinished && !isActive && (
+      {templateOwnerId === actualUserId && !isActive && (
         <Button type="default" onClick={handleFinalizeGrouping}>
           Gruplandırmayı ve Oylamayı Sonlandır
         </Button>
