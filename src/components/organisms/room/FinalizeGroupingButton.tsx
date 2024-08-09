@@ -6,6 +6,7 @@ import Buttons from "@/components/atoms/buttons/button";
 
 interface FinalizeGroupingButtonProps {
   initialTemplateOwnerId: string | null;
+
   actualUserId: string;
   roomId: string;
   onFinalize: () => void;

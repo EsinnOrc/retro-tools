@@ -167,7 +167,7 @@ const Room: React.FC = () => {
             setUserVotes={setUserVotes}
           />
           <FinalizeGroupingButton
-            templateOwnerId={templateOwnerId}
+            initialTemplateOwnerId={templateOwnerId}
             actualUserId={actualUserId}
             roomId={roomId as string}
             onFinalize={next}
