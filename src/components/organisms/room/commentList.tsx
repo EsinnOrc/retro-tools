@@ -3,7 +3,7 @@ import { List, Button, Skeleton, Card } from "antd";
 import { LikeOutlined, DislikeOutlined } from "@ant-design/icons";
 import { Comment } from "./utils";
 import { Draggable } from "react-beautiful-dnd";
-import styles from "./index.module.scss"; // Import your SCSS file
+import styles from "./index.module.scss";
 
 interface CommentListProps {
   comments: Comment[];

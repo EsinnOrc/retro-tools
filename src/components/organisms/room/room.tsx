@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Steps, Button, message } from "antd";
 import { useRouter } from "next/router";
 import io from "socket.io-client";
 import { auth } from "@/firebaseConfig";
@@ -40,6 +41,8 @@ const Room: React.FC = () => {
   const [groupDislikes, setGroupDislikes] = useState<{ [key: string]: number }>(
     {}
   );
+
+  const [currentStep, setCurrentStep] = useState(0);
 
   const router = useRouter();
   const { roomId } = router.query;
@@ -101,35 +104,111 @@ const Room: React.FC = () => {
     }
   }, [roomId, actualUserId]);
 
+  useEffect(() => {
+    if (!isActive) {
+      setCurrentStep(1);
+    }
+  }, [isActive]);
+
+  const next = () => {
+    setCurrentStep(currentStep + 1);
+  };
+
+  const prev = () => {
+    setCurrentStep(currentStep - 1);
+  };
+
+  const stepsContent = [
+    {
+      title: "Yorum Yapma",
+      content: (
+        <div>
+          <StepList
+            steps={steps}
+            comments={comments}
+            isActive={isActive}
+            newComments={newComments}
+            setNewComments={setNewComments}
+            tempUserId={tempUserId}
+            actualUserId={actualUserId}
+            socket={socket}
+            roomId={roomId as string}
+            userVotes={userVotes}
+            setComments={setComments}
+            setUserVotes={setUserVotes}
+          />
+          <FinalizeButton
+            templateOwnerId={templateOwnerId}
+            actualUserId={actualUserId}
+            isActive={isActive}
+            setIsActive={setIsActive}
+            setIsFinalized={setIsFinalized}
+            roomId={roomId as string}
+          />
+        </div>
+      ),
+    },
+    {
+      title: "Gruplama ve Oylama",
+      content: (
+        <div>
+          <StepList
+            steps={steps}
+            comments={comments}
+            isActive={isActive}
+            newComments={newComments}
+            setNewComments={setNewComments}
+            tempUserId={tempUserId}
+            actualUserId={actualUserId}
+            socket={socket}
+            roomId={roomId as string}
+            userVotes={userVotes}
+            setComments={setComments}
+            setUserVotes={setUserVotes}
+          />
+          <FinalizeGroupingButton
+            initialTemplateOwnerId={templateOwnerId}
+            actualUserId={actualUserId}
+            roomId={roomId as string}
+            onFinalize={next}
+          />
+        </div>
+      ),
+    },
+    {
+      title: "Toplantı Notları",
+      content: (
+        <div>
+          <h3>En Çok Oy Alan Yorumlar</h3>
+
+          <h3>Toplantı Notları</h3>
+          <textarea
+            placeholder="Toplantı notlarını buraya yazın..."
+            style={{ width: "100%", height: "200px" }}
+          />
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div>
-      <StepList
-        steps={steps}
-        comments={comments}
-        isActive={isActive}
-        newComments={newComments}
-        setNewComments={setNewComments}
-        tempUserId={tempUserId}
-        actualUserId={actualUserId}
-        socket={socket}
-        roomId={roomId as string}
-        userVotes={userVotes}
-        setComments={setComments}
-        setUserVotes={setUserVotes}
-      />
-      <FinalizeButton
-        templateOwnerId={templateOwnerId}
-        actualUserId={actualUserId}
-        isActive={isActive}
-        setIsActive={setIsActive}
-        setIsFinalized={setIsFinalized}
-        roomId={roomId as string}
-      />
-      <FinalizeGroupingButton
-        templateOwnerId={templateOwnerId}
-        actualUserId={actualUserId}
-        roomId={roomId as string}
-      />
+      <Steps current={currentStep}>
+        {stepsContent.map((item) => (
+          <Steps.Step key={item.title} title={item.title} />
+        ))}
+      </Steps>
+      <div style={{ marginTop: 24 }}>{stepsContent[currentStep].content}</div>
+      <div style={{ marginTop: 24 }}>
+        {currentStep === stepsContent.length - 1 && (
+          <Button
+            type="primary"
+            onClick={() => message.success("Tüm adımlar tamamlandı!")}
+          >
+            Export
+          </Button>
+        )}
+      </div>
     </div>
   );
 };
