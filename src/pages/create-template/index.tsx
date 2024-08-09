@@ -3,7 +3,7 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "@/firebaseConfig";
 import { useRouter } from "next/router";
 import MainLayout from "@/components/organisms/layout/layout";
-import CreateTemplateForm from "@/components/organisms/form/form";
+import CreateTemplateForm from "@/components/organisms/createTemplateForm/form";
 
 const CreateTemplatePage: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);

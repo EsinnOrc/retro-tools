@@ -13,8 +13,25 @@ body {
     .content {
       background: white;
     }
-    .footer {
+  }
+  .layoutRoom {
+    background: white;
+    width: 90%;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    .content {
       background: white;
+      flex: 1;
+    }
+    .footer {
+      background-color: white;
+      padding: 10px 20px;
+      text-align: center;
+      color: #666;
+      border-top: 1px solid rgb(239, 238, 238);
+      line-height: 40px;
     }
   }
 }

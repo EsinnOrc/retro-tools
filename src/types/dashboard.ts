@@ -13,6 +13,7 @@ export interface Room {
   id: string;
   template_id: string;
   is_active: boolean;
+  templateName?: string;
   created_at: {
     seconds: number;
     nanoseconds: number;
