@@ -172,24 +172,9 @@ const Room: React.FC = () => {
             setTemplateOwnerId={setTemplateOwnerId}
             actualUserId={actualUserId}
             roomId={roomId as string}
-            onFinalize={next}
             isFinalized={isFinalized}
             setIsFinalized={setIsFinalized}
             setIsActive={setIsActive}
-          />
-        </div>
-      ),
-    },
-    {
-      title: "Toplantı Notları",
-      content: (
-        <div>
-          <h3>En Çok Oy Alan Yorumlar</h3>
-
-          <h3>Toplantı Notları</h3>
-          <textarea
-            placeholder="Toplantı notlarını buraya yazın..."
-            style={{ width: "100%", height: "200px" }}
           />
         </div>
       ),
@@ -204,16 +189,7 @@ const Room: React.FC = () => {
         ))}
       </Steps>
       <div style={{ marginTop: 24 }}>{stepsContent[currentStep].content}</div>
-      <div style={{ marginTop: 24 }}>
-        {currentStep === stepsContent.length - 1 && (
-          <Button
-            type="primary"
-            onClick={() => message.success("Tüm adımlar tamamlandı!")}
-          >
-            Export
-          </Button>
-        )}
-      </div>
+      <div style={{ marginTop: 24 }}></div>
     </div>
   );
 };

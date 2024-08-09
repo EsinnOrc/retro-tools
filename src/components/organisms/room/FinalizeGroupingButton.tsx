@@ -3,12 +3,13 @@ import Swal from "sweetalert2";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebaseConfig";
 import Buttons from "@/components/atoms/buttons/button";
+import { useRouter } from "next/router";
 
 interface FinalizeGroupingButtonProps {
   isFinalized: boolean;
   templateOwnerId: string | null;
   setTemplateOwnerId: React.Dispatch<React.SetStateAction<string | null>>;
-  setIsActive: React.Dispatch<React.SetStateAction<boolean>>;
+  setIActive: React.Dispatch<React.SetStateAction<boolean>>;
   setIsFinalized: React.Dispatch<React.SetStateAction<boolean>>;
   actualUserId: string;
   roomId: string;
@@ -23,8 +24,10 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
   setIsFinalized,
   isFinalized,
   setTemplateOwnerId,
+  setIActive,
 }) => {
   const [isActive, setIsActive] = useState(false);
+  const router = typeof window !== "undefined" ? useRouter() : null;
 
   useEffect(() => {
     const fetchRoomDetails = async () => {
@@ -60,30 +63,35 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
 
   const handleFinalizeGrouping = async () => {
     Swal.fire({
-      title: "Emin misiniz?",
-      text: "Bu işlemi geri alamazsınız!",
+      title: "Are you sure?",
+      text: "You cannot undo this action!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#219ebc",
       cancelButtonColor: "rgba(99, 99, 99, 0.5) ",
-      confirmButtonText: "Evet, sonuçlandır!",
-      cancelButtonText: "Hayır, iptal et",
+      confirmButtonText: "Yes, finalize!",
+      cancelButtonText: "No, cancel",
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
           const roomRef = doc(db, "rooms", roomId);
           await updateDoc(roomRef, {
             is_finished: true,
-            is_finalized: true, // Set this to true only when finalizing
+            is_finalized: true,
           });
           if (!isFinalized) {
             setIsFinalized(true);
           }
           Swal.fire(
-            "Sonuçlandırıldı!",
-            "Yorumlar başarıyla sonuçlandırıldı.",
+            "Concluded!",
+            "Comments concluded successfully.",
             "success"
           );
+
+          if (router) {
+            router.push("/tasks"); // Replace with your desired route
+          }
+
           onFinalize(); // This will trigger the next step
         } catch (error) {
           console.error("Error finalizing grouping:", error);
@@ -98,7 +106,7 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
         <Buttons
           htmlType="button"
           onClick={handleFinalizeGrouping}
-          text="Gruplandırmayı ve Oylamayı Sonlandır"
+          text="End Grouping and Voting"
         />
       )}
     </>
