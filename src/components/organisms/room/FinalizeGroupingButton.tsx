@@ -65,7 +65,7 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
         try {
           const roomRef = doc(db, "rooms", roomId);
           await updateDoc(roomRef, {
-            is_finished: false, // Veritabanına is_finished ekliyoruz
+            is_finished: false,
           });
           Swal.fire("Sonuçlandırıldı!", "Yorumlar başarıyla sonuçlandırıldı.", "success");
         } catch (error) {
