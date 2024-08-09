@@ -16,7 +16,7 @@ const Navbar: FC<NavbarProps> = ({ defaultSelectedKeys, items }) => {
   const handleGoogleLogin = async (): Promise<void> => {
     try {
       await googleLogin();
-      router.push("/");
+      router.push("/dashboard");
     } catch (error) {
       console.error("Error during Google login:", error);
     }

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Button } from "antd";
+
 import Swal from "sweetalert2";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebaseConfig";
-
+import Buttons from "@/components/atoms/buttons/button";
 interface FinalizeGroupingButtonProps {
   initialTemplateOwnerId: string | null;
   actualUserId: string;
@@ -16,7 +16,9 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
   roomId,
 }) => {
   const [isActive, setIsActive] = useState(false);
-  const [templateOwnerId, setTemplateOwnerId] = useState<string | null>(initialTemplateOwnerId);
+  const [templateOwnerId, setTemplateOwnerId] = useState<string | null>(
+    initialTemplateOwnerId
+  );
 
   useEffect(() => {
     const fetchRoomDetails = async () => {
@@ -67,7 +69,11 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
           await updateDoc(roomRef, {
             is_finished: false,
           });
-          Swal.fire("Sonuçlandırıldı!", "Yorumlar başarıyla sonuçlandırıldı.", "success");
+          Swal.fire(
+            "Sonuçlandırıldı!",
+            "Yorumlar başarıyla sonuçlandırıldı.",
+            "success"
+          );
         } catch (error) {
           console.error("Error finalizing grouping:", error);
         }
@@ -78,9 +84,11 @@ const FinalizeGroupingButton: React.FC<FinalizeGroupingButtonProps> = ({
   return (
     <>
       {templateOwnerId === actualUserId && !isActive && (
-        <Button type="default" onClick={handleFinalizeGrouping}>
-          Gruplandırmayı ve Oylamayı Sonlandır
-        </Button>
+        <Buttons
+          htmlType="button"
+          onClick={handleFinalizeGrouping}
+          text="  Gruplandırmayı ve Oylamayı Sonlandır"
+        ></Buttons>
       )}
     </>
   );

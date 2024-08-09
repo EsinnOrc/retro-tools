@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { DragDropContext, Droppable, DropResult } from "react-beautiful-dnd";
 import CommentList from "./commentList";
 import CommentInput from "./commentInput";
+import styles from "./index.module.scss";
+
 import {
   Step,
   Comment,
@@ -284,49 +286,62 @@ const StepList: React.FC<StepListProps> = ({
 
   useEffect(() => {
     if (roomId) {
-      fetchComments(roomId, setComments, setCommentGroups, setGroupLikes, setGroupDislikes);
+      fetchComments(
+        roomId,
+        setComments,
+        setCommentGroups,
+        setGroupLikes,
+        setGroupDislikes
+      );
     }
   }, [roomId]);
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      {steps.map((step, index) => (
-        <Droppable droppableId={String(index)} key={step.id} isCombineEnabled>
-          {(provided) => (
-            <div ref={provided.innerRef} {...provided.droppableProps}>
-              <h2>{step.name}</h2>
-              <CommentList
-                comments={comments[step.id]}
-                isActive={isActive}
-                userVotes={userVotes}
-                updateCommentLikes={(commentId, stepId, newVote, isGroup) =>
-                  updateCommentLikes(
-                    commentId,
-                    stepId,
-                    newVote,
-                    actualUserId,
-                    setComments,
-                    setUserVotes,
-                    isGroup
-                  )
-                }
-                tempUserId={tempUserId}
-                commentGroups={commentGroups}
-                groupLikes={groupLikes}
-                groupDislikes={groupDislikes}
-              />
-              <CommentInput
-                stepId={step.id}
-                newComment={newComments[step.id] || ""}
-                setNewComments={setNewComments}
-                isActive={isActive}
-                sendComment={sendComment}
-              />
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-      ))}
+      <div className={styles.stepContainer}>
+        {steps.map((step, index) => (
+          <Droppable droppableId={String(index)} key={step.id} isCombineEnabled>
+            {(provided) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className={styles.stepCard}
+              >
+                <h2>{step.name}</h2>
+                <CommentInput
+                  stepId={step.id}
+                  newComment={newComments[step.id] || ""}
+                  setNewComments={setNewComments}
+                  isActive={isActive}
+                  sendComment={sendComment}
+                />
+                <CommentList
+                  comments={comments[step.id]}
+                  isActive={isActive}
+                  userVotes={userVotes}
+                  updateCommentLikes={(commentId, stepId, newVote, isGroup) =>
+                    updateCommentLikes(
+                      commentId,
+                      stepId,
+                      newVote,
+                      actualUserId,
+                      setComments,
+                      setUserVotes,
+                      isGroup
+                    )
+                  }
+                  tempUserId={tempUserId}
+                  commentGroups={commentGroups}
+                  groupLikes={groupLikes}
+                  groupDislikes={groupDislikes}
+                />
+
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        ))}
+      </div>
     </DragDropContext>
   );
 };
