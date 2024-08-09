@@ -279,6 +279,7 @@ export const finalizeComments = async (
         const roomRef = doc(db, "rooms", roomId as string);
         await updateDoc(roomRef, {
           is_active: false,
+          is_finished: false,
         });
         setIsActive(false);
         setIsFinalized(false);

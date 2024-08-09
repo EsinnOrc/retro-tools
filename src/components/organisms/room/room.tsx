@@ -4,7 +4,6 @@ import { useRouter } from "next/router";
 import io from "socket.io-client";
 import { auth } from "@/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
-import Swal from "sweetalert2";
 import { v4 as uuidv4 } from "uuid";
 import StepList from "./stepList";
 import FinalizeButton from "./finalizeButton";
@@ -26,7 +25,7 @@ const socket = io(socketUrl);
 const Room: React.FC = () => {
   const [comments, setComments] = useState<{ [key: string]: Comment[] }>({});
   const [newComments, setNewComments] = useState<{ [key: string]: string }>({});
-  const [isFinalized, setIsFinalized] = useState(false);
+  const [isFinished, setIsFinished] = useState(false);
   const [steps, setSteps] = useState<Step[]>([]);
   const [templateOwnerId, setTemplateOwnerId] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(true);
@@ -94,28 +93,22 @@ const Room: React.FC = () => {
 
   useEffect(() => {
     if (roomId && typeof roomId === "string") {
-      initializeSnapshot(roomId, setIsFinalized, setIsActive);
+      initializeSnapshot(roomId, setIsFinished, setIsActive);
     }
   }, [roomId]);
 
   useEffect(() => {
-    if (roomId && typeof roomId === "string" && actualUserId) {
-      fetchUserVotes(roomId, actualUserId, setUserVotes, setTotalVotes);
-    }
-  }, [roomId, actualUserId]);
-
-  useEffect(() => {
-    if (!isActive) {
+    if (isFinished) {
+      setCurrentStep(2);
+    } else if (!isActive) {
       setCurrentStep(1);
+    } else {
+      setCurrentStep(0);
     }
-  }, [isActive]);
+  }, [isActive, isFinished]);
 
   const next = () => {
     setCurrentStep(currentStep + 1);
-  };
-
-  const prev = () => {
-    setCurrentStep(currentStep - 1);
   };
 
   const stepsContent = [
@@ -142,7 +135,7 @@ const Room: React.FC = () => {
             actualUserId={actualUserId}
             isActive={isActive}
             setIsActive={setIsActive}
-            setIsFinalized={setIsFinalized}
+            setIsFinished={setIsFinished}
             roomId={roomId as string}
           />
         </div>
