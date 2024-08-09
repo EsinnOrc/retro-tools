@@ -3,11 +3,17 @@ import { useRouter } from "next/router";
 import io from "socket.io-client";
 import { auth } from "@/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 import { v4 as uuidv4 } from "uuid";
 import StepList from "./stepList";
 import FinalizeButton from "./finalizeButton";
-import { fetchComments, fetchRoomData, initializeSnapshot, fetchUserVotes } from "./utils";
+import FinalizeGroupingButton from "./FinalizeGroupingButton";
+import {
+  fetchComments,
+  fetchRoomData,
+  initializeSnapshot,
+  fetchUserVotes,
+} from "./utils";
 import { Comment, Step } from "./utils";
 
 const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
@@ -27,16 +33,24 @@ const Room: React.FC = () => {
   const [userVotes, setUserVotes] = useState<{ [key: string]: number }>({});
   const [actualUserId, setActualUserId] = useState<string>("");
   const [tempUserId, setTempUserId] = useState<string>("");
-  const [commentGroups, setCommentGroups] = useState<{ [key: string]: string[] }>({});
+  const [commentGroups, setCommentGroups] = useState<{
+    [key: string]: string[];
+  }>({});
   const [groupLikes, setGroupLikes] = useState<{ [key: string]: number }>({});
-  const [groupDislikes, setGroupDislikes] = useState<{ [key: string]: number }>({});
-  
+  const [groupDislikes, setGroupDislikes] = useState<{ [key: string]: number }>(
+    {}
+  );
+
   const router = useRouter();
   const { roomId } = router.query;
 
   useEffect(() => {
-    const storedUserId = typeof window !== "undefined" ? localStorage.getItem("user_id") : null;
-    const storedTempUserId = typeof window !== "undefined" ? localStorage.getItem("temp_user_id") : null;
+    const storedUserId =
+      typeof window !== "undefined" ? localStorage.getItem("user_id") : null;
+    const storedTempUserId =
+      typeof window !== "undefined"
+        ? localStorage.getItem("temp_user_id")
+        : null;
 
     const userId = storedUserId || uuidv4();
     const tempId = storedTempUserId || uuidv4();
@@ -62,14 +76,14 @@ const Room: React.FC = () => {
   useEffect(() => {
     if (roomId && typeof roomId === "string") {
       fetchRoomData(
-        roomId, 
-        setTemplateOwnerId, 
-        setSteps, 
-        setIsActive, 
-        fetchComments, 
-        setComments, 
-        setCommentGroups, 
-        setGroupLikes, 
+        roomId,
+        setTemplateOwnerId,
+        setSteps,
+        setIsActive,
+        fetchComments,
+        setComments,
+        setCommentGroups,
+        setGroupLikes,
         setGroupDislikes
       );
     }
@@ -109,6 +123,11 @@ const Room: React.FC = () => {
         isActive={isActive}
         setIsActive={setIsActive}
         setIsFinalized={setIsFinalized}
+        roomId={roomId as string}
+      />
+      <FinalizeGroupingButton
+        templateOwnerId={templateOwnerId}
+        actualUserId={actualUserId}
         roomId={roomId as string}
       />
     </div>

@@ -1,0 +1,80 @@
+.stepContainer {
+  margin: 2rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px; // Adjust the spacing between the step cards
+}
+
+.stepCard {
+  background-color: #f2f8f8;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  width: calc(
+    33.33% - 16px
+  ); // Display three cards per row, adjusting for the gap
+  box-sizing: border-box;
+
+  @media (max-width: 1024px) {
+    width: calc(50% - 16px); // Two cards per row on smaller screens
+  }
+
+  @media (max-width: 768px) {
+    width: calc(100% - 16px); // One card per row on mobile screens
+  }
+}
+
+.commentListItem {
+  margin-bottom: 8px;
+  border-radius: 4px;
+  padding: 8px;
+  overflow: hidden;
+
+  .commentCard {
+    margin-bottom: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    width: 100%;
+    box-sizing: border-box;
+
+    .commentCardBody {
+      padding: 8px;
+    }
+
+    .groupedComment {
+      font-weight: normal;
+      color: black;
+      padding: 10px;
+      border-left: 3px solid rgb(31, 185, 193);
+      background-color: #f5f6f7; // Light gray background
+      border-radius: 4px; // Rounded corners for the background
+      margin-bottom: 5px;
+      white-space: normal; // Allow text to wrap normally
+      overflow: visible; // Allow text to be fully visible
+      text-overflow: initial; // No truncation
+      font-size: 14px;
+
+      &:last-child {
+        margin-bottom: 0; // Remove margin on the last comment
+      }
+    }
+  }
+
+  .singleCommentCard {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    padding: 8px;
+    background-color: white;
+    margin-bottom: 8px;
+  }
+
+  .buttonContainer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .skeletonPlaceholder {
+    margin-bottom: 4px;
+  }
+}

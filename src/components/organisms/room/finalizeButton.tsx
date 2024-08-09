@@ -1,6 +1,6 @@
-import React from 'react';
-import { Button } from "antd";
+import React from "react";
 import { finalizeComments } from "./utils";
+import Buttons from "@/components/atoms/buttons/button"; // Buttons bileşeninin doğru yolunu kontrol edin
 
 interface FinalizeButtonProps {
   templateOwnerId: string | null;
@@ -11,7 +11,14 @@ interface FinalizeButtonProps {
   roomId: string;
 }
 
-const FinalizeButton: React.FC<FinalizeButtonProps> = ({ templateOwnerId, actualUserId, isActive, setIsActive, setIsFinalized, roomId }) => {
+const FinalizeButton: React.FC<FinalizeButtonProps> = ({
+  templateOwnerId,
+  actualUserId,
+  isActive,
+  setIsActive,
+  setIsFinalized,
+  roomId,
+}) => {
   const handleFinalize = () => {
     finalizeComments(roomId, setIsActive, setIsFinalized);
   };
@@ -19,12 +26,7 @@ const FinalizeButton: React.FC<FinalizeButtonProps> = ({ templateOwnerId, actual
   return (
     <>
       {templateOwnerId === actualUserId && isActive && (
-        <Button
-          type="default"
-          onClick={handleFinalize}
-        >
-          Sonuçlandır
-        </Button>
+        <Buttons text="Finished" onClick={handleFinalize} />
       )}
     </>
   );

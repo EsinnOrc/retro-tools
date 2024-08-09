@@ -1,13 +1,23 @@
 import Room from "@/components/organisms/room/room";
+import { Layout } from "antd";
 import React from "react";
+import RoomNavbar from "@/components/organisms/room/roomNavbar/roomNavbar";
 
-function index() {
+const { Header, Content, Footer } = Layout;
+
+function Index() {
   return (
-    <div>
-      index
-      <Room />
-    </div>
+    <Layout className="layout">
+      <RoomNavbar />
+
+      <Layout>
+        <Content className="content">
+          <Room />
+        </Content>
+      </Layout>
+      <Footer className="footer">footer</Footer>
+    </Layout>
   );
 }
 
-export default index;
+export default Index;
