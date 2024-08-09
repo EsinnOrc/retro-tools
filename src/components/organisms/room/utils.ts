@@ -447,3 +447,60 @@ export const fetchCommentGroup = async (groupId: string) => {
   }
   return null;
 };
+
+export const fetchTopCommentsAndGroups = async (
+  roomId: string,
+  setTopComments: React.Dispatch<React.SetStateAction<Comment[]>>,
+  setTopGroups: React.Dispatch<React.SetStateAction<CommentGroup[]>>
+) => {
+  try {
+    if (!roomId) {
+      throw new Error("Invalid roomId");
+    }
+
+    const commentsQuery = query(
+      collection(db, "comments"),
+      where("room_id", "==", roomId)
+    );
+    const groupsQuery = query(
+      collection(db, "comment_groups"),
+      where("room_id", "==", roomId)
+    );
+
+    const commentsSnapshot = await getDocs(commentsQuery);
+    const groupsSnapshot = await getDocs(groupsQuery);
+
+    const allComments: Comment[] = [];
+    const allGroups: CommentGroup[] = [];
+
+    commentsSnapshot.forEach((doc) => {
+      const data = doc.data() as Comment;
+      allComments.push(data);
+    });
+
+    groupsSnapshot.forEach((doc) => {
+      const data = doc.data() as CommentGroup;
+      allGroups.push(data);
+    });
+
+    // Yorumları beğeniye göre sırala ve ilk 4'ü al
+    const topComments = allComments
+      .sort((a, b) => b.likes - a.likes)
+      .slice(0, 4);
+
+    // Grupları beğeniye göre sırala ve ilk 4'ü al
+    const topGroups = allGroups
+      .sort((a, b) => b.total_likes - a.total_likes)
+      .slice(0, 4);
+
+    setTopComments(topComments);
+    setTopGroups(topGroups);
+  } catch (error) {
+    console.error("Error fetching top comments and groups:", error);
+  }
+};
+
+export const saveMeetingNotes = async (roomId: string, notes: string) => {
+  const notesRef = doc(db, "meeting_notes", roomId);
+  await setDoc(notesRef, { description: notes, updated_at: new Date() }, { merge: true });
+};
