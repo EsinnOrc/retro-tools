@@ -4,7 +4,6 @@ import { useRouter } from "next/router";
 import io from "socket.io-client";
 import { auth } from "@/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
-import Swal from "sweetalert2";
 import { v4 as uuidv4 } from "uuid";
 import StepList from "./stepList";
 import FinalizeButton from "./finalizeButton";

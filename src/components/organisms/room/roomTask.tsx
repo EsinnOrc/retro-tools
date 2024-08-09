@@ -1,18 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { List, Input, Button, message } from "antd";
-import {
-  addDoc,
-  collection,
-  query,
-  where,
-  onSnapshot,
-} from "firebase/firestore";
+import { addDoc, collection, query, where, onSnapshot, getDoc, doc } from "firebase/firestore";
 import { db } from "@/firebaseConfig";
 import Buttons from "@/components/atoms/buttons/button";
+import { PDFDocument, rgb } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 
 interface RoomTaskProps {
   roomId: string;
 }
+
 interface MeetingNote {
   id: string;
   description: string;
@@ -57,11 +54,66 @@ const RoomTask: React.FC<RoomTaskProps> = ({ roomId }) => {
         description: description,
         timestamp: new Date(),
       });
-      setDescription(""); // Clear the input field after saving
+      setDescription("");
       message.success("Meeting note saved successfully");
     } catch (error) {
       console.error("Error saving meeting note: ", error);
       message.error("Failed to save meeting note");
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      const pdfDoc = await PDFDocument.create();
+      pdfDoc.registerFontkit(fontkit);
+
+      const fontBytes = await fetch('/fonts/Roboto-Regular.ttf').then(res => res.arrayBuffer());
+      const customFont = await pdfDoc.embedFont(fontBytes);
+
+      let page = pdfDoc.addPage([600, 400]);
+
+      page.setFont(customFont);
+      page.setFontSize(16);
+      page.drawText('Meeting Notes', {
+        x: 50,
+        y: 350,
+        color: rgb(0, 0, 0),
+      });
+
+      page.setFontSize(12);
+      page.drawText(`Room ID: ${roomId}`, {
+        x: 50,
+        y: 320,
+      });
+
+      let currentY = 300;
+
+      meetingNotes.forEach((note, index) => {
+        page.drawText(`Note ${index + 1}: ${note.description}`, {
+          x: 50,
+          y: currentY,
+        });
+        currentY -= 20;
+        if (currentY < 50) {
+          page = pdfDoc.addPage([600, 400]);
+          currentY = 350;
+        }
+      });
+
+      const pdfBytes = await pdfDoc.save();
+
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Room_${roomId}_Meeting_Notes.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+    } catch (error) {
+      console.error("Error exporting meeting notes:", error);
+      message.error("Failed to export meeting notes");
     }
   };
 
@@ -89,7 +141,8 @@ const RoomTask: React.FC<RoomTaskProps> = ({ roomId }) => {
           </List.Item>
         )}
       />
-      <Buttons text="Export" onClick={() => handleExport(room)}></Buttons>
+      <a href="/room-lists">
+      <Buttons  text="For Export"></Buttons></a>
     </div>
   );
 };

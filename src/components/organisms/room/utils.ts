@@ -265,15 +265,16 @@ export const finalizeComments = async (
   setIsFinalized: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
   Swal.fire({
-    title: "Emin misiniz?",
-    text: "Bu işlemi geri alamazsınız!",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#219ebc",
-    cancelButtonColor: "rgba(99, 99, 99, 0.5) ",
-    confirmButtonText: "Evet, sonuçlandır!",
-    cancelButtonText: "Hayır, iptal et",
-  }).then(async (result) => {
+    title: "Are you sure?",
+text: "You won't be able to revert this!",
+icon: "warning",
+showCancelButton: true,
+confirmButtonColor: "#219ebc",
+cancelButtonColor: "rgba(99, 99, 99, 0.5)",
+confirmButtonText: "Yes, finalize it!",
+cancelButtonText: "No, cancel",
+}).then(async (result) => {
+
     if (result.isConfirmed) {
       try {
         const roomRef = doc(db, "rooms", roomId as string);
@@ -483,12 +484,10 @@ export const fetchTopCommentsAndGroups = async (
       allGroups.push(data);
     });
 
-    // Yorumları beğeniye göre sırala ve ilk 4'ü al
     const topComments = allComments
       .sort((a, b) => b.likes - a.likes)
       .slice(0, 4);
 
-    // Grupları beğeniye göre sırala ve ilk 4'ü al
     const topGroups = allGroups
       .sort((a, b) => b.total_likes - a.total_likes)
       .slice(0, 4);
